@@ -1,0 +1,33 @@
+service_name: my-service
+slo_percent: 99.99
+metric_name: http_requests_total
+metric_http_status_code_label: code
+metric_labels:
+  job: router_internal_default
+
+alerts:
+- severity: critical
+  speeds:
+    fast:
+      windows:
+        long: 1h
+        short: 5m
+      burn_rate_percent: 14.4
+    slow:
+      windows:
+        long: 6h
+        short: 30m
+      burn_rate_percent: 6
+- severity: warning
+  speeds:
+    fast:
+      windows:
+        long: 1d
+        short: 2h
+      burn_rate_percent: 3
+    slow:
+      windows:
+        long: 3d
+        short: 6h
+      burn_rate_percent: 1
+

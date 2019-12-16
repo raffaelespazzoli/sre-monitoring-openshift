@@ -1,0 +1,72 @@
+ 
+apiVersion: integreatly.org/v1alpha1
+kind: Grafana
+metadata:
+  name: {{ .Values.name }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  containers:
+  - name: grafana-proxy
+    readinessProbe:
+      tcpSocket:
+        port: https    
+    env:
+      - name: HTTP_PROXY
+      - name: HTTPS_PROXY
+      - name: NO_PROXY
+    ports:
+      - name: https
+        containerPort: 3000
+        protocol: TCP
+    imagePullPolicy: IfNotPresent
+    volumeMounts:
+      - name: secret-grafana-tls
+        mountPath: /etc/tls/private
+      - name: secret-grafana-proxy
+        mountPath: /etc/proxy/secrets
+    image: quay.io/openshift/origin-oauth-proxy:4.3.0
+    args:
+      - '-provider=openshift'
+      - '-https-address=:3000'
+      - '-http-address='
+      - '-email-domain=*'
+      - '-upstream=http://localhost:3001'
+      - '-openshift-sar={"resource": "namespaces", "verb": "get"}'
+      - '-openshift-delegate-urls={"/": {"resource": "namespaces", "verb": "get"}}'
+      - '-tls-cert=/etc/tls/private/tls.crt'
+      - '-tls-key=/etc/tls/private/tls.key'
+      - '-client-secret-file=/var/run/secrets/kubernetes.io/serviceaccount/token'
+      - '-cookie-secret-file=/etc/proxy/secrets/session_secret'
+      - '-openshift-service-account=grafana-serviceaccount'
+      - '-openshift-ca=/etc/pki/tls/cert.pem'
+      - '-openshift-ca=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt'
+      - '-skip-auth-regex=^/metrics'
+  secrets:
+  - grafana-tls
+  - grafana-proxy
+  service:
+    annotations:
+      service.alpha.openshift.io/serving-cert-secret-name: grafana-tls    
+  ingress:
+    enabled: True
+  config:
+    log:
+      mode: "console"
+      level: "warn"
+    security:
+      admin_user: "root"
+      admin_password: "secret"
+    auth:
+      disable_login_form: False
+      disable_signout_menu: True
+    auth.basic:
+      enabled: False
+    auth.anonymous:
+      enabled: True
+      org_role: Admin
+    server:
+      http_port: "3001"
+      http_addr: localhost      
+  dashboardLabelSelector:
+    - matchExpressions:
+        - {key: app, operator: In, values: [grafana]}

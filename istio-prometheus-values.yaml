@@ -1,0 +1,5 @@
+name: sre-service-monitoring
+session:
+  secret: ciao
+prometheus_datasource:
+  url: https://prometheus.istio-system.svc:9090

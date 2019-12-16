@@ -1,0 +1,6 @@
+name: sre-service-monitoring
+session:
+  secret: ciao
+prometheus_datasource:
+  token: "ciao"
+  url: https://prometheus-k8s.openshift-monitoring.svc:9091

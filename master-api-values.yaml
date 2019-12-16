@@ -1,0 +1,4 @@
+service_name: master-api
+metric_name: apiserver_request_total
+metric_labels:
+  job: apiserver

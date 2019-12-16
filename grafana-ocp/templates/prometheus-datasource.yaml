@@ -1,0 +1,21 @@
+apiVersion: integreatly.org/v1alpha1
+kind: GrafanaDataSource
+metadata:
+  name: {{ .Values.name }}-prometheus
+  namespace: {{ .Release.Namespace }}
+spec:
+  name: ocp-prometheus.yaml
+  datasources:
+    - name: Prometheus
+      type: prometheus
+      access: proxy
+      url: "{{ .Values.prometheus_datasource.url }}"
+      basicAuth: true
+      basicAuthPassword: "{{ .Values.prometheus_datasource.token }}"
+      basicAuthUser: "internal"
+      isDefault: true
+      version: 1
+      editable: false
+      jsonData:
+        tlsSkipVerify: true
+        timeInterval: "5s"      
