@@ -1,0 +1,5 @@
+service:
+  type: ClusterIP
+worker:
+  config:
+    configmapName: locust-tasks   

@@ -47,3 +47,20 @@ helm template grafana-ocp --namespace sre-monitoring --values ./istio-prometheus
 oc annotate serviceaccount grafana-serviceaccount serviceaccounts.openshift.io/oauth-redirectreference.grafana='{"kind":"OAuthRedirectReference","apiVersion":"v1","reference":{"kind":"Route","name":"sre-service-monitoring"}}' -n sre-monitoring
 oc annotate service grafana-service service.alpha.openshift.io/serving-cert-secret-name=grafana-tls -n sre-monitoring
 ```
+
+
+## Deploy bookinfo and generate load
+
+Follow instructions [here] to deploy OCP Service Mesh and bookinfo, the example app.
+Follow the steps below to deploy locust, a load generator
+
+```shell
+oc new-project locust
+export istio_gateway_url=$(oc get route istio-ingressgateway -n istio-system -o jsonpath='{.spec.host}')
+oc create configmap locust-tasks --from-file=tasks.py=./locust/locustfile.py -n locust
+export locust_chart_version=$(helm search locust | grep locust | awk '{print $2}')
+helm fetch stable/locust --version ${locust_chart_version}
+helm template locust-${locust_chart_version}.tgz -n bookinfo-load --namespace locust --set master.config.target-host=http://$istio_gateway_url -f ./locust/values.yaml | oc apply -f -
+rm locust-${locust_chart_version}.tgz
+oc expose service bookinfo-load-master-svc --port 8089 --name locust -n locust
+```
