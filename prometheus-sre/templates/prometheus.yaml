@@ -1,0 +1,19 @@
+apiVersion: monitoring.coreos.com/v1
+kind: Prometheus
+metadata:
+  name: {{ .Values.prometheus.name }}
+  labels:
+    prometheus: {{ .Values.prometheus.name }}
+  namespace: {{ .Release.Namespace }} 
+spec:
+  replicas: 2
+  serviceAccountName: {{ .Values.prometheus.name }}
+  serviceMonitorSelector: {}
+  alerting:
+    alertmanagers:
+    - namespace: {{ .Release.Namespace }}
+      name: {{ .Values.alertmanager.name }}
+      port: web
+  additionalScrapeConfigs:
+    name: {{ .Values.prometheus.name }}-additional-scrape-configs
+    key: prometheus-additional.yaml
