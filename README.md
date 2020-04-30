@@ -40,7 +40,7 @@ helm template sre-service-monitor --namespace grafana-operator | oc apply -f -
 helm template sre-service-monitor --namespace openshift-monitoring --values ./master-api-values.yaml | oc apply -f -
 ```
 
-## Deploy Grafana - connected to platform Prometheus
+## Deploy Grafana - connected to istio Prometheus
 
 
 ```shell
