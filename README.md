@@ -4,14 +4,23 @@ https://github.com/pingcap/chaos-mesh
 ## Install Gafana Operator
 
 ```shell
-oc new-project sre-monitoring
-oc apply -f grafana-operator.yaml -n sre-monitoring
-#fixes some operator's bug
-oc scale deployment grafana-operator --replicas=0
-#oc set image deployment/grafana-operator grafana-operator=quay.io/integreatly/grafana-operator:v3.0.0-beta
-oc set image deployment/grafana-operator grafana-operator=quay.io/integreatly/grafana-operator:v1.4.0
-oc set image deployment/grafana-operator grafana-operator=quay.io/integreatly/grafana-operator:v3.2.0
-oc scale deployment grafana-operator --replicas=1
+git clone git@github.com:integr8ly/grafana-operator.git
+
+cd grafana-operator/
+
+ansible-playbook deploy/ansible/grafana-operator-cluster-resources.yaml \
+  -e k8s_host=https://api.cluster-ef33.ef33.sandbox182.opentlc.com:6443 \
+  -e k8s_username=admin \
+  -e k8s_password='password' \
+  -e k8s_validate_certs=false \
+  -e grafana_operator_namespace=sre-monitoring
+
+ansible-playbook deploy/ansible/grafana-operator-namespace-resources.yaml \
+  -e k8s_host=https://api.cluster-ef33.ef33.sandbox182.opentlc.com:6443 \
+  -e k8s_username=admin\
+  -e k8s_password='password' \
+  -e k8s_validate_certs=false \
+  -e grafana_operator_namespace=sre-monitoring
 ```
 
 ## Deploy Grafana - connected to platform Prometheus

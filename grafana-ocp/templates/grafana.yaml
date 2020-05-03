@@ -1,4 +1,4 @@
- 
+
 apiVersion: integreatly.org/v1alpha1
 kind: Grafana
 metadata:
@@ -9,7 +9,7 @@ spec:
   - name: grafana-proxy
     readinessProbe:
       tcpSocket:
-        port: https    
+        port: https
     env:
       - name: HTTP_PROXY
       - name: HTTPS_PROXY
@@ -46,7 +46,7 @@ spec:
   - grafana-proxy
   service:
     annotations:
-      service.alpha.openshift.io/serving-cert-secret-name: grafana-tls    
+      service.alpha.openshift.io/serving-cert-secret-name: grafana-tls
   ingress:
     enabled: True
   config:
@@ -66,7 +66,7 @@ spec:
       org_role: Admin
     server:
       http_port: "3001"
-      http_addr: localhost      
+      http_addr: 0.0.0.0
   dashboardLabelSelector:
     - matchExpressions:
         - {key: app, operator: In, values: [grafana]}
