@@ -5,6 +5,8 @@ metadata:
   name: {{ .Values.name }}
   namespace: {{ .Release.Namespace }}
 spec:
+  client:
+    preferService: true
   containers:
   - name: oauth-proxy
     image: openshift/oauth-proxy:latest
