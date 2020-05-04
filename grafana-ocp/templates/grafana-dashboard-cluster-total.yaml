@@ -7,4 +7,4 @@ metadata:
     app: grafana
 spec:
   name: cluster-total.json
-  json: {{ .Files.Get "dashboards/cluster-total.json" | toPrettyJson }}
+  json: {{ .Files.Get "dashboards/openshift-monitoring/cluster-total.json" | toPrettyJson }}

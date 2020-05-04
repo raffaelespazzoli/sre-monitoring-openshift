@@ -7,4 +7,4 @@ metadata:
     app: grafana
 spec:
   name: node-rsrc-use.json
-  json: {{ .Files.Get "dashboards/node-rsrc-use.json" | toPrettyJson }}
+  json: {{ .Files.Get "dashboards/openshift-monitoring/node-rsrc-use.json" | toPrettyJson }}

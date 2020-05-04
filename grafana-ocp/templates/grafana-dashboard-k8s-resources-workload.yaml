@@ -7,4 +7,4 @@ metadata:
     app: grafana
 spec:
   name: k8s-resources-workload.json
-  json: {{ .Files.Get "dashboards/k8s-resources-workload.json" | toPrettyJson }}
+  json: {{ .Files.Get "dashboards/openshift-monitoring/k8s-resources-workload.json" | toPrettyJson }}
