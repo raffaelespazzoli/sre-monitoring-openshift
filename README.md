@@ -26,15 +26,11 @@ ansible-playbook deploy/ansible/grafana-operator-namespace-resources.yaml \
 ## Deploy Grafana - connected to platform Prometheus
 
 ```shell
-oc create sa platform-prometheus-reader -n sre-monitoring
-oc adm policy add-cluster-role-to-user view -z platform-prometheus-reader -n sre-monitoring
-export secret_name=$(oc get sa platform-prometheus-reader -o json | jq -r '.secrets[].name | select (.|contains("token"))')
-export token=$(oc get secret $secret_name -o jsonpath='{.data.token}' | base64 -d)
-helm template grafana-ocp --namespace sre-monitoring --set prometheus_datasource.token=$token | oc apply -f -
-# fixes for current bugs of the grafana operator
-oc annotate serviceaccount grafana-serviceaccount serviceaccounts.openshift.io/oauth-redirectreference.grafana='{"kind":"OAuthRedirectReference","apiVersion":"v1","reference":{"kind":"Route","name":"grafana"}}' -n sre-monitoring
+#Grab the current internal user password from the openshift-monitoring grafana instance
+export INTERNAL_PASSWORD=$(oc get secret grafana-datasources -n openshift-monitoring -o jsonpath="{.data['prometheus\.yaml']}" | base64 -d | jq -r '.datasources[0].basicAuthPassword')
 
-#oc annotate service grafana-service service.alpha.openshift.io/serving-cert-secret-name=grafana-tls -n sre-monitoring
+#Make the datasource use the internal user
+helm template grafana-ocp --namespace sre-monitoring --set prometheus_datasource.password=$INTERNAL_PASSWORD | oc apply -f -
 ```
 
 ## Deploy Service Monitoring
