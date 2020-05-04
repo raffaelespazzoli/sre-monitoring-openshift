@@ -2,7 +2,5 @@ alertmanager:
   name: sre-alertmanager
 prometheus:
   name: sre-prometheus
-  istio_endpoint:
-    token: token
 grafana:
-  name: sre-grafana  
+  name: sre-grafana

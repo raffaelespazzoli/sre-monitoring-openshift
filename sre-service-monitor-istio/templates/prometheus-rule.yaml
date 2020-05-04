@@ -1,0 +1,61 @@
+{{- define "metric_labels.array" -}}
+{{ range $key,$value := .metric_labels -}} 
+{{ $key }}: "{{ $value }}" 
+{{- end }}
+{{- end -}}    
+
+{{- define "metric_labels.string" -}}
+{{- range $key,$value := .metric_labels -}} {{ $key }}="{{ $value }}", {{- end -}}
+{{- end -}}
+
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: {{ .Values.service_name }}-alerts
+  namespace: {{ .Release.Namespace }}
+spec:
+  groups:
+  - name: SLOs-{{ .Values.service_name }}
+    rules:  
+  {{- $params := .Values }}
+  {{- range $alert_key,$alert := .Values.alerts -}}
+  {{- range $speed_key,$speed := $alert.speeds -}}
+  {{- range $window_key,$window := $speed.windows }}    
+      - expr: |
+          sum by (status_class) (
+            label_replace(
+              rate({{ $params.metric_name }}{ {{- template "metric_labels.string" $params -}} }[{{ $window }}]
+            ), "status_class", "${1}xx", "{{ $params.metric_http_status_code_label }}", "([0-9])..")
+          )
+        labels:
+          {{ template "metric_labels.array" $params }}
+        record: status_class:{{ $params.metric_name }}:rate_{{ $window }}     
+      - expr: |
+          sum(status_class:{{ $params.metric_name }}:rate_{{ $window }}{ {{- template "metric_labels.string" $params -}} status_class="5xx"})
+          /
+          sum(status_class:{{ $params.metric_name }}:rate_{{ $window }}{ {{- template "metric_labels.string" $params -}} })
+        labels:
+          {{ template "metric_labels.array" $params }}
+        record: status_class_5xx:{{ $params.metric_name }}:ratio_rate_{{ $window }}
+  {{- end -}}
+  {{- end }}
+      - alert: ErrorBudgetBurn
+        expr: |
+          (
+            status_class_5xx:{{ $params.metric_name }}:ratio_rate_{{ $alert.speeds.fast.windows.long }}{ {{- template "metric_labels.string" $params -}} } > ({{ $alert.speeds.fast.burn_rate_percent }}/100*(1-({{ $params.slo_percent }}/100)))
+            and
+            status_class_5xx:{{ $params.metric_name }}:ratio_rate_{{ $alert.speeds.fast.windows.short }}{ {{- template "metric_labels.string" $params -}} } > ({{ $alert.speeds.fast.burn_rate_percent }}/100*(1-({{ $params.slo_percent }}/100)))
+          )
+          or
+          (
+            status_class_5xx:{{ $params.metric_name }}:ratio_rate_{{ $alert.speeds.slow.windows.long }}{ {{- template "metric_labels.string" $params -}} } > ({{ $alert.speeds.slow.burn_rate_percent }}/100*(1-({{ $params.slo_percent }}/100)))
+            and
+            status_class_5xx:{{ $params.metric_name }}:ratio_rate_{{ $alert.speeds.slow.windows.short }}{ {{- template "metric_labels.string" $params -}} } > ({{ $alert.speeds.slow.burn_rate_percent }}/100*(1-({{ $params.slo_percent }}/100)))
+          )
+        labels:
+          {{ template "metric_labels.array" $params }}
+          severity: {{ $alert.severity }}
+          service: {{ $params.service_name }}
+  {{- end -}}
+
+          

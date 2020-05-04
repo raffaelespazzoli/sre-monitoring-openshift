@@ -1,0 +1,32 @@
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: details
+spec:
+  hosts:
+  - details
+  http:
+  - route:
+    - destination:
+        host: details
+        subset: app-details
+    fault:
+      abort:
+        percentage:
+          value: 10
+        httpStatus: 503
+      delay:
+        fixedDelay: 2.000s
+        percent: 10
+---        
+apiVersion: networking.istio.io/v1alpha3
+kind: DestinationRule
+metadata:
+  name: details
+spec:
+  host: details
+  subsets:
+  - labels:
+      app: details
+    name: app-details                
