@@ -6,49 +6,43 @@ metadata:
   namespace: {{ .Release.Namespace }}
 spec:
   containers:
-  - name: grafana-proxy
-    readinessProbe:
-      tcpSocket:
-        port: https
-    env:
-      - name: HTTP_PROXY
-      - name: HTTPS_PROXY
-      - name: NO_PROXY
-    ports:
-      - name: https
-        containerPort: 3000
-        protocol: TCP
+  - name: oauth-proxy
+    image: openshift/oauth-proxy:latest
     imagePullPolicy: IfNotPresent
     volumeMounts:
-      - name: secret-grafana-tls
+      - name: secret-proxy-tls
         mountPath: /etc/tls/private
-      - name: secret-grafana-proxy
-        mountPath: /etc/proxy/secrets
-    image: quay.io/openshift/origin-oauth-proxy:4.3.0
+    ports:
+    - containerPort: 8443
+      name: public
     args:
-      - '-provider=openshift'
-      - '-https-address=:3000'
-      - '-http-address='
-      - '-email-domain=*'
-      - '-upstream=http://localhost:3001'
-      - '-openshift-sar={"resource": "namespaces", "verb": "get"}'
-      - '-openshift-delegate-urls={"/": {"resource": "namespaces", "verb": "get"}}'
-      - '-tls-cert=/etc/tls/private/tls.crt'
-      - '-tls-key=/etc/tls/private/tls.key'
-      - '-client-secret-file=/var/run/secrets/kubernetes.io/serviceaccount/token'
-      - '-cookie-secret-file=/etc/proxy/secrets/session_secret'
-      - '-openshift-service-account=grafana-serviceaccount'
-      - '-openshift-ca=/etc/pki/tls/cert.pem'
-      - '-openshift-ca=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt'
-      - '-skip-auth-regex=^/metrics'
+      - --https-address=:8443
+      - --provider=openshift
+      - --openshift-service-account=grafana-serviceaccount
+      - --upstream=http://localhost:3001
+      - --tls-cert=/etc/tls/private/tls.crt
+      - --tls-key=/etc/tls/private/tls.key
+      - --cookie-secret=SECRET
   secrets:
-  - grafana-tls
-  - grafana-proxy
+    - proxy-tls
+  serviceAccount:
+    annotations:
+      serviceaccounts.openshift.io/oauth-redirectreference.primary: '{"kind":"OAuthRedirectReference","apiVersion":"v1","reference":{"kind":"Route","name":"grafana-route"}}'
   service:
     annotations:
-      service.alpha.openshift.io/serving-cert-secret-name: grafana-tls
+      service.alpha.openshift.io/serving-cert-secret-name: proxy-tls
+    type: ClusterIP          # Set Service type, either NodePort, ClusterIP or LoadBalancer
+    ports:                  # Additional ports to add to the service
+      - name: proxy
+        port: 443
+        protocol: TCP
+        targetPort: 8443
+    selector:
+      app: grafana
   ingress:
     enabled: True
+    targetPort: proxy
+    termination: reencrypt
   config:
     log:
       mode: "console"
