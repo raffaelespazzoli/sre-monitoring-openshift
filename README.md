@@ -49,11 +49,10 @@ helm template sre-service-monitor --namespace openshift-monitoring --values ./ma
 
 
 ```shell
-export token=$(oc get secret htpasswd -n istio-system -o jsonpath='{.data.rawPassword}' | base64 -d)
-helm template grafana-ocp --namespace sre-monitoring --values ./istio-prometheus-values.yaml --set prometheus_datasource.token=$token | oc apply -f -
-# fixes for current bugs of the grafana operator
-oc annotate serviceaccount grafana-serviceaccount serviceaccounts.openshift.io/oauth-redirectreference.grafana='{"kind":"OAuthRedirectReference","apiVersion":"v1","reference":{"kind":"Route","name":"sre-service-monitoring"}}' -n sre-monitoring
-#oc annotate service grafana-service service.alpha.openshift.io/serving-cert-secret-name=grafana-tls -n sre-monitoring
+export ISTIO_PASSWORD=$(oc get secret htpasswd -n istio-system -o jsonpath='{.data.rawPassword}' | base64 -d)
+
+#Make the datasource use the internal user
+helm template grafana-ocp --namespace sre-monitoring --values ./istio-prometheus-values.yaml --set prometheus_datasource.password=$ISTIO_PASSWORD | oc apply -f -
 ```
 
 ## Deploy bookinfo and generate load

@@ -2,4 +2,7 @@ name: sre-service-monitoring
 session:
   secret: ciao
 prometheus_datasource:
+  name: istio-system
   url: https://prometheus.istio-system.svc:9090
+  password: "TODO"
+  isDefault: false

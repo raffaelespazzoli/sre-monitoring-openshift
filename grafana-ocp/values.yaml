@@ -3,4 +3,6 @@ session:
   secret: ciao
 prometheus_datasource:
   password: "TODO"
+  name: openshift-monitoring
   url: https://prometheus-k8s.openshift-monitoring.svc:9091
+  isDefault: true
