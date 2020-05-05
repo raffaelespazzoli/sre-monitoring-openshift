@@ -58,7 +58,7 @@
                 "label": "Others",
                 "threshold": 0
             },
-            "datasource": "prometheus",
+            "datasource": "prometheus-openshift-monitoring",
             "description": "",
             "fontSize": "80%",
             "format": "Bps",
@@ -104,7 +104,7 @@
                 "label": "Others",
                 "threshold": 0
             },
-            "datasource": "prometheus",
+            "datasource": "prometheus-openshift-monitoring",
             "description": "",
             "fontSize": "80%",
             "format": "Bps",
@@ -183,7 +183,7 @@
                     "value": ""
                 }
             ],
-            "datasource": "prometheus",
+            "datasource": "prometheus-openshift-monitoring",
             "fill": 1,
             "fontSize": "90%",
             "gridPos": {
@@ -488,7 +488,7 @@
                         "label": "Others",
                         "threshold": 0
                     },
-                    "datasource": "prometheus",
+                    "datasource": "prometheus-openshift-monitoring",
                     "description": "",
                     "fontSize": "80%",
                     "format": "Bps",
@@ -534,7 +534,7 @@
                         "label": "Others",
                         "threshold": 0
                     },
-                    "datasource": "prometheus",
+                    "datasource": "prometheus-openshift-monitoring",
                     "description": "",
                     "fontSize": "80%",
                     "format": "Bps",
@@ -607,7 +607,7 @@
             "bars": false,
             "dashLength": 10,
             "dashes": false,
-            "datasource": "prometheus",
+            "datasource": "prometheus-openshift-monitoring",
             "fill": 2,
             "gridPos": {
                 "h": 9,
@@ -706,7 +706,7 @@
             "bars": false,
             "dashLength": 10,
             "dashes": false,
-            "datasource": "prometheus",
+            "datasource": "prometheus-openshift-monitoring",
             "fill": 2,
             "gridPos": {
                 "h": 9,
@@ -816,7 +816,7 @@
                     "bars": false,
                     "dashLength": 10,
                     "dashes": false,
-                    "datasource": "prometheus",
+                    "datasource": "prometheus-openshift-monitoring",
                     "fill": 2,
                     "gridPos": {
                         "h": 9,
@@ -915,7 +915,7 @@
                     "bars": false,
                     "dashLength": 10,
                     "dashes": false,
-                    "datasource": "prometheus",
+                    "datasource": "prometheus-openshift-monitoring",
                     "fill": 2,
                     "gridPos": {
                         "h": 9,
@@ -1034,7 +1034,7 @@
                     "bars": false,
                     "dashLength": 10,
                     "dashes": false,
-                    "datasource": "prometheus",
+                    "datasource": "prometheus-openshift-monitoring",
                     "fill": 2,
                     "gridPos": {
                         "h": 9,
@@ -1133,7 +1133,7 @@
                     "bars": false,
                     "dashLength": 10,
                     "dashes": false,
-                    "datasource": "prometheus",
+                    "datasource": "prometheus-openshift-monitoring",
                     "fill": 2,
                     "gridPos": {
                         "h": 9,
@@ -1255,7 +1255,7 @@
                     "text": "5m",
                     "value": "5m"
                 },
-                "datasource": "prometheus",
+                "datasource": "prometheus-openshift-monitoring",
                 "hide": 0,
                 "includeAll": false,
                 "label": null,
@@ -1300,7 +1300,7 @@
                     "text": "5m",
                     "value": "5m"
                 },
-                "datasource": "prometheus",
+                "datasource": "prometheus-openshift-monitoring",
                 "hide": 2,
                 "includeAll": false,
                 "label": null,
