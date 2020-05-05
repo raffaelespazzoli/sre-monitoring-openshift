@@ -3,7 +3,10 @@ kind: Grafana
 metadata:
   name: {{ .Values.grafana.name }}
   namespace: {{ .Release.Namespace }}
-spec:    
+spec:
+  deployment:
+    labels:
+      maistra.io/expose-route: 'true'    
   ingress:
     enabled: True
   config:
