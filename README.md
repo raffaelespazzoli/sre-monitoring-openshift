@@ -1,31 +1,70 @@
 # SRE Monitoring for OCP
+
 https://github.com/pingcap/chaos-mesh
 
-## Install Gafana Operator
+## Install the Grafana Operator
+
+The first step is to install the Grafana operator to a namespace in your cluster.
+
+There are two options for this procedure, automated via Ansible, or manually running kubectl/oc commands.
+
+See the [grafana-operator documentation](https://github.com/integr8ly/grafana-operator/blob/master/documentation/deploy_grafana.md) for up-to-date info.
+
+### Manual Procedure
 
 ```shell
-oc new-project sre-monitoring
-oc apply -f grafana-operator.yaml -n sre-monitoring
-#fixes some operator's bug
-oc scale deployment grafana-operator --replicas=0
-#oc set image deployment/grafana-operator grafana-operator=quay.io/integreatly/grafana-operator:v3.0.0-beta
-oc set image deployment/grafana-operator grafana-operator=quay.io/integreatly/grafana-operator:v1.4.0
-oc set image deployment/grafana-operator grafana-operator=quay.io/integreatly/grafana-operator:v3.2.0
-oc scale deployment grafana-operator --replicas=1
+#Clone the grafana-operator repository
+git clone git@github.com:integr8ly/grafana-operator.git
+
+#To create a namespace named "sre-monitoring" run:
+oc create namespace sre-monitoring
+
+#Create the custom resource definitions that the operator uses:
+oc create -f deploy/crds
+
+#Create the operator roles:
+oc create -f deploy/roles -n sre-monitoring
+
+#If you want to scan for dashboards in other namespaces you also need the cluster roles:
+oc create -f deploy/cluster_roles
+
+#To deploy the operator to that namespace you can use `deploy/operator.yaml`:
+oc create -f deploy/operator.yaml -n sre-monitoring
+
+#Check that the STATUS of the operator pod is Running:
+oc get pods -n sre-monitoring
+```
+
+### Automated Procedure
+
+```shell
+git clone git@github.com:integr8ly/grafana-operator.git
+
+cd grafana-operator/
+
+ansible-playbook deploy/ansible/grafana-operator-cluster-resources.yaml \
+  -e k8s_host=https://api.my-example-cluster.com:6443 \
+  -e k8s_username=admin \
+  -e k8s_password='password' \
+  -e k8s_validate_certs=false \
+  -e grafana_operator_namespace=sre-monitoring
+
+ansible-playbook deploy/ansible/grafana-operator-namespace-resources.yaml \
+  -e k8s_host=https://api.my-example-cluster.com:6443 \
+  -e k8s_username=admin\
+  -e k8s_password='password' \
+  -e k8s_validate_certs=false \
+  -e grafana_operator_namespace=sre-monitoring
 ```
 
 ## Deploy Grafana - connected to platform Prometheus
 
 ```shell
-oc create sa platform-prometheus-reader -n sre-monitoring
-oc adm policy add-cluster-role-to-user view -z platform-prometheus-reader -n sre-monitoring
-export secret_name=$(oc get sa platform-prometheus-reader -o json | jq -r '.secrets[].name | select (.|contains("token"))')
-export token=$(oc get secret $secret_name -o jsonpath='{.data.token}' | base64 -d)
-helm template grafana-ocp --namespace sre-monitoring --set prometheus_datasource.token=$token | oc apply -f -
-# fixes for current bugs of the grafana operator
-oc annotate serviceaccount grafana-serviceaccount serviceaccounts.openshift.io/oauth-redirectreference.grafana='{"kind":"OAuthRedirectReference","apiVersion":"v1","reference":{"kind":"Route","name":"grafana"}}' -n sre-monitoring
+#Grab the current internal user password from the openshift-monitoring grafana instance
+export INTERNAL_PASSWORD=$(oc get secret grafana-datasources -n openshift-monitoring -o jsonpath="{.data['prometheus\.yaml']}" | base64 -d | jq -r '.datasources[0].basicAuthPassword')
 
-#oc annotate service grafana-service service.alpha.openshift.io/serving-cert-secret-name=grafana-tls -n sre-monitoring
+#Make the datasource use the internal user
+helm template grafana-ocp --namespace sre-monitoring --set prometheus_datasource.password=$INTERNAL_PASSWORD | oc apply -f -
 ```
 
 ## Deploy Service Monitoring
@@ -44,11 +83,10 @@ helm template sre-service-monitor --namespace openshift-monitoring --values ./ma
 
 
 ```shell
-export token=$(oc get secret htpasswd -n istio-system -o jsonpath='{.data.rawPassword}' | base64 -d)
-helm template grafana-ocp --namespace sre-monitoring --values ./istio-prometheus-values.yaml --set prometheus_datasource.token=$token | oc apply -f -
-# fixes for current bugs of the grafana operator
-oc annotate serviceaccount grafana-serviceaccount serviceaccounts.openshift.io/oauth-redirectreference.grafana='{"kind":"OAuthRedirectReference","apiVersion":"v1","reference":{"kind":"Route","name":"sre-service-monitoring"}}' -n sre-monitoring
-#oc annotate service grafana-service service.alpha.openshift.io/serving-cert-secret-name=grafana-tls -n sre-monitoring
+export ISTIO_PASSWORD=$(oc get secret htpasswd -n istio-system -o jsonpath='{.data.rawPassword}' | base64 -d)
+
+#Make the datasource use the internal user
+helm template grafana-ocp --namespace sre-monitoring --values ./istio-prometheus-values.yaml --set prometheus_datasource.password=$ISTIO_PASSWORD | oc apply -f -
 ```
 
 ## Deploy bookinfo and generate load
