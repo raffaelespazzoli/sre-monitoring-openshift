@@ -5,9 +5,10 @@ metadata:
   name: {{ .Values.name }}
   namespace: {{ .Release.Namespace }}
 spec:
-  deplpyment:
+  deployment:
     labels:
-      maistra.io/expose-route: 'true'   
+      maistra.io/expose-route: 'true'
+      app: grafana
   client:
     preferService: true
   containers:
