@@ -1,7 +1,41 @@
 # SRE Monitoring for OCP
+
 https://github.com/pingcap/chaos-mesh
 
-## Install Gafana Operator
+## Install the Grafana Operator
+
+The first step is to install the Grafana operator to a namespace in your cluster.
+
+There are two options for this procedure, automated via Ansible, or manually running kubectl/oc commands.
+
+See the [grafana-operator documentation](https://github.com/integr8ly/grafana-operator/blob/master/documentation/deploy_grafana.md) for up-to-date info.
+
+### Manual Procedure
+
+```shell
+#Clone the grafana-operator repository
+git clone git@github.com:integr8ly/grafana-operator.git
+
+#To create a namespace named "sre-monitoring" run:
+oc create namespace sre-monitoring
+
+#Create the custom resource definitions that the operator uses:
+oc create -f deploy/crds
+
+#Create the operator roles:
+oc create -f deploy/roles -n sre-monitoring
+
+#If you want to scan for dashboards in other namespaces you also need the cluster roles:
+oc create -f deploy/cluster_roles
+
+#To deploy the operator to that namespace you can use `deploy/operator.yaml`:
+oc create -f deploy/operator.yaml -n sre-monitoring
+
+#Check that the STATUS of the operator pod is Running:
+oc get pods -n sre-monitoring
+```
+
+### Automated Procedure
 
 ```shell
 git clone git@github.com:integr8ly/grafana-operator.git
@@ -9,14 +43,14 @@ git clone git@github.com:integr8ly/grafana-operator.git
 cd grafana-operator/
 
 ansible-playbook deploy/ansible/grafana-operator-cluster-resources.yaml \
-  -e k8s_host=https://api.cluster-ef33.ef33.sandbox182.opentlc.com:6443 \
+  -e k8s_host=https://api.my-example-cluster.com:6443 \
   -e k8s_username=admin \
   -e k8s_password='password' \
   -e k8s_validate_certs=false \
   -e grafana_operator_namespace=sre-monitoring
 
 ansible-playbook deploy/ansible/grafana-operator-namespace-resources.yaml \
-  -e k8s_host=https://api.cluster-ef33.ef33.sandbox182.opentlc.com:6443 \
+  -e k8s_host=https://api.my-example-cluster.com:6443 \
   -e k8s_username=admin\
   -e k8s_password='password' \
   -e k8s_validate_certs=false \

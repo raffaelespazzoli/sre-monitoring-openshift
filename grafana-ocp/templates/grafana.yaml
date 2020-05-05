@@ -14,19 +14,26 @@ spec:
     volumeMounts:
       - name: secret-proxy-tls
         mountPath: /etc/tls/private
+      - name: secret-grafana-proxy
+        mountPath: /etc/proxy/secrets
     ports:
     - containerPort: 8443
       name: public
     args:
-      - --https-address=:8443
-      - --provider=openshift
-      - --openshift-service-account=grafana-serviceaccount
-      - --upstream=http://localhost:3001
-      - --tls-cert=/etc/tls/private/tls.crt
-      - --tls-key=/etc/tls/private/tls.key
-      - --cookie-secret=SECRET
+      - '-https-address=:8443'
+      - '-provider=openshift'
+      - '-openshift-service-account=grafana-serviceaccount'
+      - '-openshift-sar={"resource": "namespaces", "verb": "get"}'
+      - '-openshift-delegate-urls={"/": {"resource": "namespaces", "verb": "get"}}'
+      - '-upstream=http://localhost:3001'
+      - '-tls-cert=/etc/tls/private/tls.crt'
+      - '-tls-key=/etc/tls/private/tls.key'
+      - '-client-secret-file=/var/run/secrets/kubernetes.io/serviceaccount/token'
+      - '-cookie-secret-file=/etc/proxy/secrets/session_secret'
+      - '-skip-auth-regex=^/metrics'
   secrets:
     - proxy-tls
+    - grafana-proxy
   serviceAccount:
     annotations:
       serviceaccounts.openshift.io/oauth-redirectreference.primary: '{"kind":"OAuthRedirectReference","apiVersion":"v1","reference":{"kind":"Route","name":"grafana-route"}}'
