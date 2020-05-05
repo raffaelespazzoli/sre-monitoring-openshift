@@ -4,7 +4,7 @@ metadata:
   name: sre-operators
 spec:
   targetNamespaces:
-  - sre-monitoring
+  - ${deploy_namespace}
 ---
 apiVersion: operators.coreos.com/v1alpha1
 kind: Subscription

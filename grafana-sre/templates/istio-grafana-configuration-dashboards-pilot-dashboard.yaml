@@ -1,0 +1,10 @@
+apiVersion: integreatly.org/v1alpha1
+kind: GrafanaDashboard
+metadata:
+  name: istio-grafana-configuration-dashboards-pilot-dashboard
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: grafana
+spec:
+  name: pilot-dashboard.json
+  json: {{ .Files.Get "dashboards/istio-system/pilot-dashboard.json" | toPrettyJson }}

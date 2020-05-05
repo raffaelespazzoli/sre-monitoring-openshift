@@ -1,9 +1,12 @@
- apiVersion: integreatly.org/v1alpha1
+apiVersion: integreatly.org/v1alpha1
 kind: Grafana
 metadata:
   name: {{ .Values.grafana.name }}
   namespace: {{ .Release.Namespace }}
-spec:    
+spec:
+  deployment:
+    labels:
+      maistra.io/expose-route: 'true'    
   ingress:
     enabled: True
   config:

@@ -1,14 +1,14 @@
 apiVersion: route.openshift.io/v1
 kind: Route
 metadata:
-  name: {{ .Values.name }}
+  name: {{ .Values.prometheus.name }}
   namespace: {{ .Release.Namespace }}  
 spec:
   port:
-    targetPort: grafana
+    targetPort: web
   tls:
     insecureEdgeTerminationPolicy: Redirect
-    termination: reencrypt
+    termination: edge
   to:
     kind: Service
-    name: grafana-service
+    name: prometheus-operated

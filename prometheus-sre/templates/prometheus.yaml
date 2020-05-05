@@ -6,6 +6,9 @@ metadata:
     prometheus: {{ .Values.prometheus.name }}
   namespace: {{ .Release.Namespace }} 
 spec:
+  podMetadata:
+    labels:
+      maistra.io/expose-route: 'true'
   replicas: 2
   serviceAccountName: {{ .Values.prometheus.name }}
   serviceMonitorSelector: {}
@@ -17,3 +20,14 @@ spec:
   additionalScrapeConfigs:
     name: {{ .Values.prometheus.name }}-additional-scrape-configs
     key: prometheus-additional.yaml
+  volumeMounts:
+  - name: istio-certs
+    mountPath: /etc/istio-certs
+  volumes:  
+  - name: istio-certs
+    secret:
+      secretName: istio-certs
+      defaultMode: 42
+  #serviceAccountName: prometheus
+  baseImage: registry.redhat.io/openshift-service-mesh/prometheus-rhel8
+  sha: 70960efc418688d96d6e9b1ee8a35905ce221cb08d9e5aefff9616e44b95cd9f      

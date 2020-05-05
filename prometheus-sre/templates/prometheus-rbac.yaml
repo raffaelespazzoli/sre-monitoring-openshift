@@ -1,69 +1,44 @@
-kind: RoleBinding
-apiVersion: rbac.authorization.k8s.io/v1
-metadata:
-  name: {{ .Values.prometheus.name }}
-  namespace: {{ .Release.Namespace }} 
-subjects:
-- kind: ServiceAccount
-  namespace: {{ .Release.Namespace }}
-  name: {{ .Values.prometheus.name }}
-roleRef:
-  kind: ClusterRole
-  name: view
-  apiGroup: rbac.authorization.k8s.io
----  
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: {{ .Values.prometheus.name }}-cmo
-  namespace: {{ .Release.Namespace }} 
+  name: {{ .Values.prometheus.name }}
+#  namespace: {{ .Release.Namespace }}
 subjects:
 - kind: ServiceAccount
   namespace: {{ .Release.Namespace }}
   name: {{ .Values.prometheus.name }}
 roleRef:
   kind: ClusterRole
-  name: cluster-monitoring-view
+  name: servicemeshmemberrolls.maistra.io-v1-view
   apiGroup: rbac.authorization.k8s.io
 ---
 kind: RoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: {{ .Values.prometheus.name }}-istio
-  namespace: istio-system 
+  name: {{ .Values.prometheus.name }}
+  namespace: {{ .Values.istio_control_plane_namespace }} 
 subjects:
 - kind: ServiceAccount
   namespace: {{ .Release.Namespace }}
   name: {{ .Values.prometheus.name }}
 roleRef:
-  kind: Role
-  name: view
-  apiGroup: rbac.authorization.k8s.io  
----  
-# kind: ClusterRoleBinding
-# apiVersion: rbac.authorization.k8s.io/v1
-# metadata:
-#   name: {{ .Values.prometheus.name }}-view
-#   namespace: {{ .Release.Namespace }} 
-# subjects:
-# - kind: ServiceAccount
-#   namespace: {{ .Release.Namespace }}
-#   name: {{ .Values.prometheus.name }}
-# roleRef:
-#   kind: ClusterRole
-#   name: view
-#   apiGroup: rbac.authorization.k8s.io
-# ---
-# kind: ClusterRoleBinding
-# apiVersion: rbac.authorization.k8s.io/v1
-# metadata:
-#   name: {{ .Values.prometheus.name }}-admin
-#   namespace: {{ .Release.Namespace }} 
-# subjects:
-# - kind: ServiceAccount
-#   namespace: {{ .Release.Namespace }}
-#   name: {{ .Values.prometheus.name }}
-# roleRef:
-#   kind: ClusterRole
-#   name: cluster-admin
-#   apiGroup: rbac.authorization.k8s.io    
+  kind: ClusterRole
+  name: prometheus-istio-system
+  apiGroup: rbac.authorization.k8s.io
+{{ $params:= . }}  
+{{ range $index, $namespace := .Values.members }}
+---
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: {{ $params.Values.prometheus.name }}
+  namespace: {{ $namespace }}
+subjects:
+- kind: ServiceAccount
+  namespace: {{ $params.Release.Namespace }}
+  name: {{ $params.Values.prometheus.name }}
+roleRef:
+  kind: ClusterRole
+  name: prometheus-istio-system
+  apiGroup: rbac.authorization.k8s.io 
+{{ end }}
