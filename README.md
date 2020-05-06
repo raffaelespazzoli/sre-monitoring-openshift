@@ -139,6 +139,8 @@ helm template prometheus-sre --namespace sre-monitoring --set prometheus.istio_e
 ```shell
 export istio_cp_namespace=istio-system
 export deploy_namespace=sre-monitoring
+export istio_cp_name=basic-install
+
 oc new-project ${deploy_namespace}
 ```
 
@@ -163,15 +165,18 @@ export cert_chain_pem=$(oc get secret -n istio-system istio.default -o json | jq
 export key_pem=$(oc get secret -n istio-system istio.default -o json | jq -r '.data["key.pem"]')
 export root_cert_pem=$(oc get secret -n istio-system istio.default -o json | jq -r '.data["root-cert.pem"]')
 oc get ServiceMeshMemberRoll/default -n istio-system -o json | jq -r .spec | j2y > /tmp/members.yaml
-helm template prometheus-sre --namespace ${deploy_namespace}  -f /tmp/members.yaml --set istio_control_plane_namespace=${istio_cp_namespace} --set istio_cert.cert_chain=${cert_chain_pem} --set istio_cert.key=${key_pem} --set istio_cert.root_cert=${root_cert_pem} | oc apply -f -
+helm template prometheus-sre --namespace ${deploy_namespace}  -f /tmp/members.yaml --set istio_control_plane_name=${istio_cp_name} --set istio_control_plane_namespace=${istio_cp_namespace} --set istio_cert.cert_chain=${cert_chain_pem} --set istio_cert.key=${key_pem} --set istio_cert.root_cert=${root_cert_pem} | oc apply -f -
 #wait a few minutes
 oc patch statefulset/prometheus-sre-prometheus --type='json' -p='[{"op": "add", "path": "/spec/template/spec/containers/0/args/-", "value": "--discovery.member-roll-name=default" }]' -n ${deploy_namespace}
 oc patch statefulset/prometheus-sre-prometheus --type='json' -p='[{"op": "add", "path": "/spec/template/spec/containers/0/args/-", "value": "--discovery.member-roll-namespace='${istio_cp_namespace}'" }]' -n ${deploy_namespace}
 oc patch statefulset/prometheus-sre-prometheus --type='json' -p='[{"op": "add", "path": "/spec/template/spec/containers/0/volumeMounts/-", "value":  { "name": "istio-certs", "mountPath": "/etc/istio-certs" }  }]' -n ${deploy_namespace}
 ```
 
-## Deploy Grafana
+## Deploy Grafana with openshift-monitoring and sre prometheus datasources
 
+```shell
+helm template grafana-sre --namespace sre-monitoring --set prometheus_datasource.openshift_monitoring.password=$(oc get secret grafana-datasources -n openshift-monitoring -o jsonpath="{.data['prometheus\.yaml']}" | base64 -d | jq -r '.datasources[0].basicAuthPassword') | oc apply -f -
+```
 
 error rate:
 
