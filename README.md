@@ -164,6 +164,7 @@ cat ./grafana-operator/cluster_role_binding_grafana_operator.yaml | envsubst | o
 export cert_chain_pem=$(oc get secret -n istio-system istio.default -o json | jq -r '.data["cert-chain.pem"]')
 export key_pem=$(oc get secret -n istio-system istio.default -o json | jq -r '.data["key.pem"]')
 export root_cert_pem=$(oc get secret -n istio-system istio.default -o json | jq -r '.data["root-cert.pem"]')
+oc patch ServiceMeshMemberRoll/default --type='json' -p='[{"op": "add", "path": "/spec/members/-", "value": "'${deploy_namespace}'" }]' -n ${istio_cp_namespace}
 oc get ServiceMeshMemberRoll/default -n istio-system -o json | jq -r .spec | j2y > /tmp/members.yaml
 helm template prometheus-sre --namespace ${deploy_namespace}  -f /tmp/members.yaml --set istio_control_plane_name=${istio_cp_name} --set istio_control_plane_namespace=${istio_cp_namespace} --set istio_cert.cert_chain=${cert_chain_pem} --set istio_cert.key=${key_pem} --set istio_cert.root_cert=${root_cert_pem} | oc apply -f -
 #wait a few minutes
