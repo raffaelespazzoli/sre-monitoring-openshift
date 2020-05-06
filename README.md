@@ -42,17 +42,21 @@ git clone git@github.com:integr8ly/grafana-operator.git
 
 cd grafana-operator/
 
+export openshift_api_url=https://api.my-example-cluster.com:6443
+export openshift_username=admin
+export openshift_password='password'
+
 ansible-playbook deploy/ansible/grafana-operator-cluster-resources.yaml \
-  -e k8s_host=https://api.my-example-cluster.com:6443 \
-  -e k8s_username=admin \
-  -e k8s_password='password' \
+  -e k8s_host=${openshift_api_url} \
+  -e k8s_username=${openshift_username} \
+  -e k8s_password=${openshift_password} \
   -e k8s_validate_certs=false \
   -e grafana_operator_namespace=sre-monitoring
 
 ansible-playbook deploy/ansible/grafana-operator-namespace-resources.yaml \
-  -e k8s_host=https://api.my-example-cluster.com:6443 \
-  -e k8s_username=admin\
-  -e k8s_password='password' \
+  -e k8s_host=${openshift_api_url} \
+  -e k8s_username=${openshift_username} \
+  -e k8s_password=${openshift_password} \
   -e k8s_validate_certs=false \
   -e grafana_operator_namespace=sre-monitoring
 ```
@@ -141,25 +145,13 @@ export istio_cp_name=mtls-install
 
 oc new-project ${deploy_namespace}
 
-#Note: you must have mesh-user role on istio-system namespace
-oc create -f - <<EOF
-apiVersion: maistra.io/v1
-kind: ServiceMeshMember
-metadata:
-  name: default
-  namespace: $deploy_namespace
-spec:
-  controlPlaneRef:
-    name: $istio_cp_name
-    namespace: $istio_cp_namespace
-EOF
 
 cat prometheus-operator.yaml | envsubst | oc apply -f - -n ${deploy_namespace}
 export cert_chain_pem=$(oc get secret -n istio-system istio.default -o json | jq -r '.data["cert-chain.pem"]')
 export key_pem=$(oc get secret -n istio-system istio.default -o json | jq -r '.data["key.pem"]')
 export root_cert_pem=$(oc get secret -n istio-system istio.default -o json | jq -r '.data["root-cert.pem"]')
 oc get ServiceMeshMemberRoll/default -n istio-system -o json | jq -r .spec | j2y > /tmp/members.yaml
-helm template prometheus-sre --namespace ${deploy_namespace}  -f /tmp/members.yaml --set istio_control_plane_namespace=${istio_cp_namespace} --set istio_cert.cert_chain=${cert_chain_pem} --set istio_cert.key=${key_pem} --set istio_cert.root_cert=${root_cert_pem} | oc apply -f -
+helm template prometheus-sre --namespace ${deploy_namespace}  -f /tmp/members.yaml --set istio_control_plane.namespace=${istio_cp_namespace} --set istio_cert.cert_chain=${cert_chain_pem} --set istio_cert.key=${key_pem} --set istio_cert.root_cert=${root_cert_pem} | oc apply -f -
 #wait a few minutes
 oc patch statefulset/prometheus-sre-prometheus --type='json' -p='[{"op": "add", "path": "/spec/template/spec/containers/0/args/-", "value": "--discovery.member-roll-name=default" }]' -n ${deploy_namespace}
 oc patch statefulset/prometheus-sre-prometheus --type='json' -p='[{"op": "add", "path": "/spec/template/spec/containers/0/args/-", "value": "--discovery.member-roll-namespace='${istio_cp_namespace}'" }]' -n ${deploy_namespace}
@@ -169,24 +161,11 @@ oc patch statefulset/prometheus-sre-prometheus --type='json' -p='[{"op": "add", 
 ## Deploy Grafana with openshift-monitoring and sre prometheus datasources
 
 ```shell
-oc new-project sre-monitoring
-
 export istio_cp_namespace=istio-system
 export deploy_namespace=sre-monitoring
 export istio_cp_name=mtls-install
 
-#Note: you must have mesh-user role on istio-system namespace
-oc create -f - <<EOF
-apiVersion: maistra.io/v1
-kind: ServiceMeshMember
-metadata:
-  name: default
-  namespace: $deploy_namespace
-spec:
-  controlPlaneRef:
-    name: $istio_cp_name
-    namespace: $istio_cp_namespace
-EOF
+oc new-project ${deploy_namespace}
 
 cat prometheus-operator.yaml | envsubst | oc apply -f - -n ${deploy_namespace}
 #Check that the STATUS of the prometheus-operator pod is Running.
@@ -199,10 +178,16 @@ oc get pods -n sre-monitoring
 export cert_chain_pem=$(oc get secret -n istio-system istio.default -o json | jq -r '.data["cert-chain.pem"]')
 export key_pem=$(oc get secret -n istio-system istio.default -o json | jq -r '.data["key.pem"]')
 export root_cert_pem=$(oc get secret -n istio-system istio.default -o json | jq -r '.data["root-cert.pem"]')
+
+#This may not include the sre-monitoring member since it hasn't been added yet. That's OK though, we add it anyways in the updated prometheus-rbac.yaml template.
 oc get ServiceMeshMemberRoll/default -n istio-system -o json | jq -r .spec > /tmp/members.yaml
-helm template prometheus-sre --namespace ${deploy_namespace}  -f /tmp/members.yaml --set istio_control_plane_namespace=${istio_cp_namespace} --set istio_cert.cert_chain=${cert_chain_pem} --set istio_cert.key=${key_pem} --set istio_cert.root_cert=${root_cert_pem} | oc apply -f -
+
+helm template prometheus-sre --namespace ${deploy_namespace} -f /tmp/members.yaml --set istio_control_plane.namespace=${istio_cp_namespace} --set istio_cert.cert_chain=${cert_chain_pem} --set istio_cert.key=${key_pem} --set istio_cert.root_cert=${root_cert_pem} | oc apply -f -
+
 oc patch statefulset/prometheus-sre-prometheus --type='json' -p='[{"op": "add", "path": "/spec/template/spec/containers/0/args/-", "value": "--discovery.member-roll-name=default" }]' -n ${deploy_namespace}
+
 oc patch statefulset/prometheus-sre-prometheus --type='json' -p='[{"op": "add", "path": "/spec/template/spec/containers/0/args/-", "value": "--discovery.member-roll-namespace='${istio_cp_namespace}'" }]' -n ${deploy_namespace}
+
 oc patch statefulset/prometheus-sre-prometheus --type='json' -p='[{"op": "add", "path": "/spec/template/spec/containers/0/volumeMounts/-", "value":  { "name": "istio-certs", "mountPath": "/etc/istio-certs" }  }]' -n ${deploy_namespace}
 
 #Deploy Grafana

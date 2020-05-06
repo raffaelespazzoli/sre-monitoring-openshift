@@ -2,5 +2,8 @@ alertmanager:
   name: sre-alertmanager
 prometheus:
   name: sre-prometheus
+istio_control_plane:
+  name: mtls-install
+  namespace: istio-system
 #grafana:
 #  name: sre-grafana
