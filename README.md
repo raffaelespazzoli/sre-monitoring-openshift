@@ -137,8 +137,23 @@ helm template prometheus-sre --namespace sre-monitoring --set prometheus.istio_e
 ```shell
 export istio_cp_namespace=istio-system
 export deploy_namespace=sre-monitoring
+export istio_cp_name=mtls-install
+
 oc new-project ${deploy_namespace}
-oc patch ServiceMeshMemberRoll/default --type='json' -p='[{"op": "add", "path": "/spec/members/-", "value": "'${deploy_namespace}'" }]' -n ${istio_cp_namespace}
+
+#Note: you must have mesh-user role on istio-system namespace
+oc create -f - <<EOF
+apiVersion: maistra.io/v1
+kind: ServiceMeshMember
+metadata:
+  name: default
+  namespace: $deploy_namespace
+spec:
+  controlPlaneRef:
+    name: $istio_cp_name
+    namespace: $istio_cp_namespace
+EOF
+
 cat prometheus-operator.yaml | envsubst | oc apply -f - -n ${deploy_namespace}
 export cert_chain_pem=$(oc get secret -n istio-system istio.default -o json | jq -r '.data["cert-chain.pem"]')
 export key_pem=$(oc get secret -n istio-system istio.default -o json | jq -r '.data["key.pem"]')
