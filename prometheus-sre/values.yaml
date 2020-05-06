@@ -1,3 +1,5 @@
+session:
+  secret: ciao
 alertmanager:
   name: sre-alertmanager
 prometheus:
