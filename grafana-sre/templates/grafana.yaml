@@ -1,78 +1,74 @@
-
+# Adopted from https://github.com/integr8ly/grafana-operator/blob/master/deploy/examples/oauth/Grafana.yaml
 apiVersion: integreatly.org/v1alpha1
 kind: Grafana
 metadata:
-  name: {{ .Values.name }}
-  namespace: {{ .Release.Namespace }}
+  name: grafana-oauth
 spec:
-  deplpyment:
-    labels:
-      maistra.io/expose-route: 'true'   
-  client:
-    preferService: true
-  containers:
-  - name: oauth-proxy
-    image: openshift/oauth-proxy:latest
-    imagePullPolicy: IfNotPresent
-    volumeMounts:
-      - name: secret-proxy-tls
-        mountPath: /etc/tls/private
-      - name: secret-grafana-proxy
-        mountPath: /etc/proxy/secrets
-    ports:
-    - containerPort: 8443
-      name: public
-    args:
-      - '-https-address=:8443'
-      - '-provider=openshift'
-      - '-openshift-service-account=grafana-serviceaccount'
-      - '-openshift-sar={"resource": "namespaces", "verb": "get"}'
-      - '-openshift-delegate-urls={"/": {"resource": "namespaces", "verb": "get"}}'
-      - '-upstream=http://localhost:3001'
-      - '-tls-cert=/etc/tls/private/tls.crt'
-      - '-tls-key=/etc/tls/private/tls.key'
-      - '-client-secret-file=/var/run/secrets/kubernetes.io/serviceaccount/token'
-      - '-cookie-secret-file=/etc/proxy/secrets/session_secret'
-      - '-skip-auth-regex=^/metrics'
-  secrets:
-    - proxy-tls
-    - grafana-proxy
-  serviceAccount:
-    annotations:
-      serviceaccounts.openshift.io/oauth-redirectreference.primary: '{"kind":"OAuthRedirectReference","apiVersion":"v1","reference":{"kind":"Route","name":"grafana-route"}}'
-  service:
-    annotations:
-      service.alpha.openshift.io/serving-cert-secret-name: proxy-tls
-    type: ClusterIP          # Set Service type, either NodePort, ClusterIP or LoadBalancer
-    ports:                  # Additional ports to add to the service
-      - name: proxy
-        port: 443
-        protocol: TCP
-        targetPort: 8443
-    selector:
-      app: grafana
-  ingress:
-    enabled: True
-    targetPort: proxy
-    termination: reencrypt
   config:
     log:
       mode: "console"
       level: "warn"
-    security:
-      admin_user: "root"
-      admin_password: "secret"
     auth:
       disable_login_form: False
       disable_signout_menu: True
     auth.basic:
-      enabled: False
+      enabled: True
     auth.anonymous:
       enabled: True
-      org_role: Admin
-    server:
-      http_port: "3001"
-      http_addr: 0.0.0.0
+  containers:
+    - args:
+        - '-provider=openshift'
+        - '-pass-basic-auth=false'
+        - '-https-address=:9091'
+        - '-http-address='
+        - '-email-domain=*'
+        - '-upstream=http://localhost:3000'
+        - '-openshift-sar={"resource": "namespaces", "verb": "get"}'
+        - '-openshift-delegate-urls={"/": {"resource": "namespaces", "verb": "get"}}'
+        - '-tls-cert=/etc/tls/private/tls.crt'
+        - '-tls-key=/etc/tls/private/tls.key'
+        - '-client-secret-file=/var/run/secrets/kubernetes.io/serviceaccount/token'
+        - '-cookie-secret-file=/etc/proxy/secrets/session_secret'
+        - '-openshift-service-account=grafana-serviceaccount'
+        - '-openshift-ca=/etc/pki/tls/cert.pem'
+        - '-openshift-ca=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt'
+        - '-skip-auth-regex=^/metrics'
+      image: 'quay.io/openshift/origin-oauth-proxy:4.6'
+      name: grafana-proxy
+      ports:
+        - containerPort: 9091
+          name: grafana-proxy
+      resources: {}
+      volumeMounts:
+        - mountPath: /etc/tls/private
+          name: secret-grafana-k8s-tls
+          readOnly: false
+        - mountPath: /etc/proxy/secrets
+          name: secret-grafana-k8s-proxy
+          readOnly: false
+  secrets:
+    - grafana-k8s-tls
+    - grafana-k8s-proxy
+  service:
+    ports:
+      - name: grafana-proxy
+        port: 9091
+        protocol: TCP
+        targetPort: grafana-proxy
+    annotations:
+      service.alpha.openshift.io/serving-cert-secret-name: grafana-k8s-tls
+  ingress:
+    enabled: True
+    targetPort: grafana-proxy
+    termination: reencrypt
+  client:
+    preferService: True
+  serviceAccount:
+    annotations:
+      serviceaccounts.openshift.io/oauth-redirectreference.primary: '{"kind":"OAuthRedirectReference","apiVersion":"v1","reference":{"kind":"Route","name":"grafana-route"}}'
   dashboardLabelSelector:
     - matchExpressions:
-        - {key: app, operator: In, values: [grafana]}
+        - { key: "app", operator: In, values: ['grafana'] }
+  deployment:
+    labels:
+      maistra.io/expose-route: 'true'

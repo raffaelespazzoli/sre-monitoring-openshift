@@ -17,7 +17,7 @@ spec:
       version: 1
       secureJsonData:
         basicAuthPassword: "{{ .Values.prometheus_datasource.password }}"
-      editable: true
+      editable: false
       jsonData:
         tlsSkipVerify: true
         timeInterval: "5s"

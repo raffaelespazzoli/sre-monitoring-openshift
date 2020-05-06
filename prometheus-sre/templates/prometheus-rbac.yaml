@@ -16,7 +16,7 @@ kind: RoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: {{ .Values.prometheus.name }}
-  namespace: {{ .Values.istio_control_plane_namespace }} 
+  namespace: {{ .Values.istio_control_plane_namespace }}
 subjects:
 - kind: ServiceAccount
   namespace: {{ .Release.Namespace }}
@@ -25,7 +25,7 @@ roleRef:
   kind: ClusterRole
   name: prometheus-istio-system
   apiGroup: rbac.authorization.k8s.io
-{{ $params:= . }}  
+{{ $params:= . }}
 {{ range $index, $namespace := .Values.members }}
 ---
 kind: RoleBinding
@@ -40,5 +40,19 @@ subjects:
 roleRef:
   kind: ClusterRole
   name: prometheus-istio-system
-  apiGroup: rbac.authorization.k8s.io 
+  apiGroup: rbac.authorization.k8s.io
 {{ end }}
+---
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: {{ .Values.prometheus.name }}
+  namespace: {{ .Release.Namespace }}
+subjects:
+- kind: ServiceAccount
+  namespace: {{ .Release.Namespace }}
+  name: {{ .Values.prometheus.name }}
+roleRef:
+  kind: ClusterRole
+  name: prometheus-istio-system
+  apiGroup: rbac.authorization.k8s.io
