@@ -134,12 +134,31 @@ helm template prometheus-sre --namespace sre-monitoring --set prometheus.istio_e
 
 ## New Try for extensible istio monitoring
 
+## Preparation
+
 ```shell
 export istio_cp_namespace=istio-system
 export deploy_namespace=sre-monitoring
 oc new-project ${deploy_namespace}
-oc patch ServiceMeshMemberRoll/default --type='json' -p='[{"op": "add", "path": "/spec/members/-", "value": "'${deploy_namespace}'" }]' -n ${istio_cp_namespace}
+```
+
+## Deploy Prometheus Operator
+
+```shell
 cat prometheus-operator.yaml | envsubst | oc apply -f - -n ${deploy_namespace}
+```
+
+## Deploy Grafana Operator
+
+```shell
+oc apply -f ./grafana-operator/crds
+oc apply -f ./grafana-operator/manifests -n ${deploy_namespace}
+cat ./grafana-operator/cluster_role_binding_grafana_operator.yaml | envsubst | oc apply -f -
+```
+
+## Deploy Prometheus
+
+```shell
 export cert_chain_pem=$(oc get secret -n istio-system istio.default -o json | jq -r '.data["cert-chain.pem"]')
 export key_pem=$(oc get secret -n istio-system istio.default -o json | jq -r '.data["key.pem"]')
 export root_cert_pem=$(oc get secret -n istio-system istio.default -o json | jq -r '.data["root-cert.pem"]')
@@ -151,6 +170,7 @@ oc patch statefulset/prometheus-sre-prometheus --type='json' -p='[{"op": "add", 
 oc patch statefulset/prometheus-sre-prometheus --type='json' -p='[{"op": "add", "path": "/spec/template/spec/containers/0/volumeMounts/-", "value":  { "name": "istio-certs", "mountPath": "/etc/istio-certs" }  }]' -n ${deploy_namespace}
 ```
 
+## Deploy Grafana
 
 
 error rate:
