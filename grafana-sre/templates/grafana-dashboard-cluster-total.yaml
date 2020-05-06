@@ -8,3 +8,6 @@ metadata:
 spec:
   name: cluster-total.json
   json: {{ .Files.Get "dashboards/openshift-monitoring/cluster-total.json" | toPrettyJson }}
+  plugins:
+    - name: "grafana-piechart-panel"
+      version: "1.4.0"
