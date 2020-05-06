@@ -34,7 +34,7 @@ spec:
       name: prometheus-proxy
       ports:
         - containerPort: 9091
-          name: web
+          name: proxy
       resources:
         requests:
           cpu: 10m
