@@ -5,7 +5,7 @@ metadata:
   name: alertmanager-k8s
   namespace: {{ .Release.Namespace }}
   labels:
-    prometheus: k8s
+    alertmanager: k8s
   annotations:
     service.alpha.openshift.io/serving-cert-secret-name: alertmanager-k8s-tls
 spec:
