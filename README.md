@@ -130,7 +130,7 @@ oc patch statefulset/prometheus-sre-prometheus --type='json' -p='[{"op": "add", 
 ### Deploy Grafana with openshift-monitoring and sre prometheus datasources
 
 ```shell
-helm template grafana-sre --namespace sre-monitoring --set prometheus_datasource.openshift_monitoring.password=$(oc get secret grafana-datasources -n openshift-monitoring -o jsonpath="{.data['prometheus\.yaml']}" | base64 -d | jq -r '.datasources[0].basicAuthPassword') | oc apply -f -
+helm template grafana-sre --namespace ${deploy_namespace} --set prometheus_datasource.openshift_monitoring.password=$(oc get secret grafana-datasources -n openshift-monitoring -o jsonpath="{.data['prometheus\.yaml']}" | base64 -d | jq -r '.datasources[0].basicAuthPassword') | oc apply -f -
 ```
 
 error rate:
