@@ -15,6 +15,7 @@ spec:
       enabled: True
     auth.anonymous:
       enabled: True
+      org_role: Admin
   containers:
     - args:
         - '-provider=openshift'

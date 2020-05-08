@@ -10,57 +10,6 @@ There are two options for this procedure, automated via Ansible, or manually run
 
 See the [grafana-operator documentation](https://github.com/integr8ly/grafana-operator/blob/master/documentation/deploy_grafana.md) for up-to-date info.
 
-### Manual Procedure
-
-```shell
-#Clone the grafana-operator repository
-git clone git@github.com:integr8ly/grafana-operator.git
-
-#To create a namespace named "sre-monitoring" run:
-oc create namespace sre-monitoring
-
-#Create the custom resource definitions that the operator uses:
-oc create -f deploy/crds
-
-#Create the operator roles:
-oc create -f deploy/roles -n sre-monitoring
-
-#If you want to scan for dashboards in other namespaces you also need the cluster roles:
-oc create -f deploy/cluster_roles
-
-#To deploy the operator to that namespace you can use `deploy/operator.yaml`:
-oc create -f deploy/operator.yaml -n sre-monitoring
-
-#Check that the STATUS of the operator pod is Running:
-oc get pods -n sre-monitoring
-```
-
-### Automated Procedure
-
-```shell
-git clone git@github.com:integr8ly/grafana-operator.git
-
-cd grafana-operator/
-
-export openshift_api_url=https://api.my-example-cluster.com:6443
-export openshift_username=admin
-export openshift_password='password'
-
-ansible-playbook deploy/ansible/grafana-operator-cluster-resources.yaml \
-  -e k8s_host=${openshift_api_url} \
-  -e k8s_username=${openshift_username} \
-  -e k8s_password=${openshift_password} \
-  -e k8s_validate_certs=false \
-  -e grafana_operator_namespace=sre-monitoring
-
-ansible-playbook deploy/ansible/grafana-operator-namespace-resources.yaml \
-  -e k8s_host=${openshift_api_url} \
-  -e k8s_username=${openshift_username} \
-  -e k8s_password=${openshift_password} \
-  -e k8s_validate_certs=false \
-  -e grafana_operator_namespace=sre-monitoring
-```
-
 ## Deploy Grafana - connected to platform Prometheus
 
 ```shell
@@ -187,6 +136,8 @@ helm template grafana-sre --namespace sre-monitoring --set prometheus_datasource
 error rate:
 
 sum(rate(istio_requests_total{destination_service_namespace="bookinfo",destination_service="details.bookinfo.svc.cluster.local",response_code!~"5.*"}[5m]))/sum(rate(istio_requests_total{destination_service_namespace="bookinfo",destination_service="details.bookinfo.svc.cluster.local"}[5m]))
+
+sum(increase(istio_requests_total{connection_security_policy!="none",destination_service="$virtual_service",response_code!~"5.*"}[$time_interval]))/sum(increase(istio_requests_total{connection_security_policy!="none",destination_service="$virtual_service"}[$time_interval]))  
 
 
 ## Fault injection
