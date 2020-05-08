@@ -183,6 +183,8 @@ error rate:
 
 sum(rate(istio_requests_total{destination_service_namespace="bookinfo",destination_service="details.bookinfo.svc.cluster.local",response_code!~"5.*"}[5m]))/sum(rate(istio_requests_total{destination_service_namespace="bookinfo",destination_service="details.bookinfo.svc.cluster.local"}[5m]))
 
+sum(increase(istio_requests_total{connection_security_policy!="none",destination_service="$virtual_service",response_code!~"5.*"}[$time_interval]))/sum(increase(istio_requests_total{connection_security_policy!="none",destination_service="$virtual_service"}[$time_interval]))  
+
 
 ## Fault injection
 
