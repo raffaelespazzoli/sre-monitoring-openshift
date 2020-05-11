@@ -15,10 +15,104 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "id": 21,
-  "iteration": 1588816918749,
+  "id": 17,
+  "iteration": 1589073325894,
   "links": [],
   "panels": [
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "prometheus-istio-system",
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      },
+      "hiddenSeries": false,
+      "id": 4,
+      "legend": {
+        "alignAsTable": true,
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "rightSide": true,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
+      "percentage": false,
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "sum(increase(istio_request_duration_seconds_bucket{connection_security_policy!=\"none\",destination_service=\"$virtual_service\",response_code!~\"5.*\",le=\"$latency\"}[$time_interval]))/sum(increase(istio_request_duration_seconds_bucket{connection_security_policy!=\"none\",destination_service=\"$virtual_service\",le=\"+Inf\"}[$time_interval]))",
+          "legendFormat": "error budget",
+          "refId": "A"
+        },
+        {
+          "expr": "$SLO/100",
+          "legendFormat": "SLO",
+          "refId": "B"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Error Budget with katency",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "percentunit",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
     {
       "aliasColors": {},
       "bars": false,
@@ -31,7 +125,7 @@
         "h": 9,
         "w": 12,
         "x": 0,
-        "y": 0
+        "y": 8
       },
       "hiddenSeries": false,
       "id": 2,
@@ -62,7 +156,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(increment(istio_requests_total{connection_security_policy!=\"none\",destination_service=\"$virtual_service\",response_code!~\"5.*\"}[$time_interval]))/sum(increment(istio_requests_total{connection_security_policy!=\"none\",destination_service=\"$virtual_service\"}[$time_interval]))  ",
+          "expr": "sum(increase(istio_requests_total{connection_security_policy!=\"none\",destination_service=\"$virtual_service\",response_code!~\"5.*\"}[$time_interval]))/sum(increase(istio_requests_total{connection_security_policy!=\"none\",destination_service=\"$virtual_service\"}[$time_interval]))  ",
           "legendFormat": "error budget",
           "refId": "A"
         },
@@ -114,6 +208,7 @@
       }
     }
   ],
+  "refresh": "5s",
   "schemaVersion": 21,
   "style": "dark",
   "tags": [],
@@ -227,11 +322,98 @@
         "query": "95",
         "skipUrlSync": false,
         "type": "textbox"
+      },
+      {
+        "allValue": null,
+        "current": {
+          "tags": [],
+          "text": "1",
+          "value": "1"
+        },
+        "datasource": "prometheus-istio-system",
+        "definition": "label_values(istio_request_duration_seconds_bucket, le)",
+        "hide": 0,
+        "includeAll": false,
+        "label": "latency in seconds",
+        "multi": false,
+        "name": "latency",
+        "options": [
+          {
+            "selected": false,
+            "text": "+Inf",
+            "value": "+Inf"
+          },
+          {
+            "selected": false,
+            "text": "0.005",
+            "value": "0.005"
+          },
+          {
+            "selected": false,
+            "text": "0.01",
+            "value": "0.01"
+          },
+          {
+            "selected": false,
+            "text": "0.025",
+            "value": "0.025"
+          },
+          {
+            "selected": false,
+            "text": "0.05",
+            "value": "0.05"
+          },
+          {
+            "selected": false,
+            "text": "0.1",
+            "value": "0.1"
+          },
+          {
+            "selected": false,
+            "text": "0.25",
+            "value": "0.25"
+          },
+          {
+            "selected": false,
+            "text": "0.5",
+            "value": "0.5"
+          },
+          {
+            "selected": true,
+            "text": "1",
+            "value": "1"
+          },
+          {
+            "selected": false,
+            "text": "10",
+            "value": "10"
+          },
+          {
+            "selected": false,
+            "text": "2.5",
+            "value": "2.5"
+          },
+          {
+            "selected": false,
+            "text": "5",
+            "value": "5"
+          }
+        ],
+        "query": "label_values(istio_request_duration_seconds_bucket, le)",
+        "refresh": 0,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "tagValuesQuery": "",
+        "tags": [],
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
       }
     ]
   },
   "time": {
-    "from": "now-6h",
+    "from": "now-30m",
     "to": "now"
   },
   "timepicker": {
@@ -251,5 +433,5 @@
   "timezone": "",
   "title": "Error Budget",
   "uid": "AqEG4weWk",
-  "version": 2
+  "version": 3
 }

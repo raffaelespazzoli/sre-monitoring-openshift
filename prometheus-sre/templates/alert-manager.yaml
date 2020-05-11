@@ -6,7 +6,7 @@ metadata:
 spec:
   replicas: 2
   serviceAccountName: {{ .Values.alertmanager.name }}
-  listenLocal: true
+  #listenLocal: true
   podMetadata:
     labels:
       maistra.io/expose-route: 'true'

@@ -11,51 +11,50 @@
 apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule
 metadata:
-  name: {{ .Values.service_name }}-alerts
+  name: {{ .Values.destination_service }}-alerts
   namespace: {{ .Release.Namespace }}
+  labels:
+    prometheus: {{ .Values.prometheus }}
+    sre-monitoring: "true"
 spec:
   groups:
-  - name: SLOs-{{ .Values.service_name }}
+  - name: SLOs-{{ .Values.destination_service }}
     rules:  
   {{- $params := .Values }}
+  {{- $destination_service := $params.destination_service | replace "." "_" }}
   {{- range $alert_key,$alert := .Values.alerts -}}
   {{- range $speed_key,$speed := $alert.speeds -}}
   {{- range $window_key,$window := $speed.windows }}    
       - expr: |
-          sum by (status_class) (
-            label_replace(
-              rate({{ $params.metric_name }}{ {{- template "metric_labels.string" $params -}} }[{{ $window }}]
-            ), "status_class", "${1}xx", "{{ $params.metric_http_status_code_label }}", "([0-9])..")
+          ( 
+            sum(rate(istio_request_duration_seconds_count{connection_security_policy!="none",destination_service="{{ $params.destination_service }}"}[{{ $window }}])) -
+            sum(rate(istio_request_duration_seconds_bucket{connection_security_policy!="none",destination_service="{{ $params.destination_service }}",response_code!~"5.*",le="{{ $params.latency }}"}[{{ $window }}]))
           )
-        labels:
-          {{ template "metric_labels.array" $params }}
-        record: status_class:{{ $params.metric_name }}:rate_{{ $window }}     
-      - expr: |
-          sum(status_class:{{ $params.metric_name }}:rate_{{ $window }}{ {{- template "metric_labels.string" $params -}} status_class="5xx"})
           /
-          sum(status_class:{{ $params.metric_name }}:rate_{{ $window }}{ {{- template "metric_labels.string" $params -}} })
+          sum(rate(istio_request_duration_seconds_count{connection_security_policy!="none",destination_service="{{ $params.destination_service }}"}[{{ $window }}]))
         labels:
           {{ template "metric_labels.array" $params }}
-        record: status_class_5xx:{{ $params.metric_name }}:ratio_rate_{{ $window }}
+          service: {{ $params.destination_service }}
+        record: virtual_service:{{ $destination_service }}:error_rate_{{ $window }}
   {{- end -}}
   {{- end }}
       - alert: ErrorBudgetBurn
         expr: |
           (
-            status_class_5xx:{{ $params.metric_name }}:ratio_rate_{{ $alert.speeds.fast.windows.long }}{ {{- template "metric_labels.string" $params -}} } > ({{ $alert.speeds.fast.burn_rate_percent }}/100*(1-({{ $params.slo_percent }}/100)))
+            virtual_service:{{ $destination_service }}:error_rate_{{ $alert.speeds.fast.windows.long }} > ({{ $alert.speeds.fast.burn_rate_percent }}/100*(1-({{ $params.slo_percent }}/100)))
             and
-            status_class_5xx:{{ $params.metric_name }}:ratio_rate_{{ $alert.speeds.fast.windows.short }}{ {{- template "metric_labels.string" $params -}} } > ({{ $alert.speeds.fast.burn_rate_percent }}/100*(1-({{ $params.slo_percent }}/100)))
+            virtual_service:{{ $destination_service }}:error_rate_{{ $alert.speeds.fast.windows.short }} > ({{ $alert.speeds.fast.burn_rate_percent }}/100*(1-({{ $params.slo_percent }}/100)))
           )
           or
           (
-            status_class_5xx:{{ $params.metric_name }}:ratio_rate_{{ $alert.speeds.slow.windows.long }}{ {{- template "metric_labels.string" $params -}} } > ({{ $alert.speeds.slow.burn_rate_percent }}/100*(1-({{ $params.slo_percent }}/100)))
+            virtual_service:{{ $destination_service }}:error_rate_{{ $alert.speeds.slow.windows.long }} > ({{ $alert.speeds.slow.burn_rate_percent }}/100*(1-({{ $params.slo_percent }}/100)))
             and
-            status_class_5xx:{{ $params.metric_name }}:ratio_rate_{{ $alert.speeds.slow.windows.short }}{ {{- template "metric_labels.string" $params -}} } > ({{ $alert.speeds.slow.burn_rate_percent }}/100*(1-({{ $params.slo_percent }}/100)))
+            virtual_service:{{ $destination_service }}:error_rate_{{ $alert.speeds.slow.windows.short }} > ({{ $alert.speeds.slow.burn_rate_percent }}/100*(1-({{ $params.slo_percent }}/100)))
           )
         labels:
           {{ template "metric_labels.array" $params }}
           severity: {{ $alert.severity }}
-          service: {{ $params.service_name }}
+          service: {{ $params.destination_service }}
   {{- end -}}
 
           
