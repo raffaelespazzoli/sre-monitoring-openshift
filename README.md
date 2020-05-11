@@ -41,7 +41,6 @@ oc patch statefulset/prometheus-sre-prometheus --type='json' -p='[{"op": "add", 
 
 oc patch statefulset/prometheus-sre-prometheus --type='json' -p='[{"op": "add", "path": "/spec/template/spec/containers/0/args/-", "value": "--discovery.member-roll-namespace='${istio_cp_namespace}'" }]' -n ${deploy_namespace}
 
-oc patch statefulset/prometheus-sre-prometheus --type='json' -p='[{"op": "add", "path": "/spec/template/spec/containers/0/volumeMounts/-", "value":  { "name": "istio-certs", "mountPath": "/etc/istio-certs" }  }]' -n ${deploy_namespace}
 ```
 
 ### Deploy Grafana with openshift-monitoring and sre prometheus datasources
