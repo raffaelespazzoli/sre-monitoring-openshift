@@ -51,11 +51,7 @@ Follow the steps below to deploy locust, a load generator
 oc new-project locust
 export istio_gateway_url=$(oc get route istio-ingressgateway -n istio-system -o jsonpath='{.spec.host}')
 oc create configmap locust-tasks --from-file=tasks.py=./locust/locustfile.py -n locust
-helm repo add stable https://kubernetes-charts.storage.googleapis.com/
-export locust_chart_version=$(helm search repo locust | grep locust | awk '{print $2}')
-helm fetch stable/locust --version ${locust_chart_version}
-helm template locust-${locust_chart_version}.tgz --namespace locust --set master.config.target-host=http://$istio_gateway_url -f ./locust/values.yaml --name-template locust | oc apply -f -
-rm locust-${locust_chart_version}.tgz
+helm install stable/locust --namespace locust --set master.config.target-host=http://$istio_gateway_url -f ./locust/values.yaml --name-template locust
 oc expose service locust-master-svc --port 8089 --name locust -n locust
 ```
 
@@ -139,9 +135,18 @@ sum(rate(istio_requests_total{destination_service_namespace="bookinfo",destinati
 
 sum(increase(istio_requests_total{connection_security_policy!="none",destination_service="$virtual_service",response_code!~"5.*"}[$time_interval]))/sum(increase(istio_requests_total{connection_security_policy!="none",destination_service="$virtual_service"}[$time_interval]))  
 
+sum(increase(istio_request_duration_seconds_bucket{connection_security_policy!="none",destination_service="$virtual_service",response_code!~"5.*",le="$latency"}[$time_interval]))/sum(increase(istio_request_duration_seconds_bucket{connection_security_policy!="none",destination_service="$virtual_service",le="+Inf"}[$time_interval]))
+
+istio_request_duration_seconds_bucket{connection_security_policy!="none",destination_service="$virtual_service",response_code!~"5.*"}
 
 ## Fault injection
 
 ```shell
 oc apply -f failure-injection.yaml -n bookinfo
+```
+
+## create SLO alerts
+
+```shell
+helm template sre-service-monitor-istio --namespace bookinfo --set slo_percent=95 --set prometheus=sre-prometheus | oc apply -f -
 ```

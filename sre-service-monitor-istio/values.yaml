@@ -1,7 +1,6 @@
 destination_service: details.bookinfo.svc.cluster.local
 slo_percent: 99.99
-metric_name: istio_requests_total
-metric_http_status_code_label: response_code
+latency: 1
 metric_labels:
   destination_service_namespace: bookinfo
 
