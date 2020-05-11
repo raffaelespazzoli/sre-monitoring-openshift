@@ -45,4 +45,4 @@ spec:
         - mountPath: /etc/tls/private
           name: secret-alertmanager-k8s-tls
         - mountPath: /etc/proxy/secrets
-          name: secret-alertmanager-k8s-proxy      
+          name: secret-alertmanager-k8s-proxy

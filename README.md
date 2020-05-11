@@ -31,11 +31,15 @@ cat ./grafana-operator/cluster_role_binding_grafana_operator.yaml | envsubst | o
 ### Deploy Prometheus
 
 ```shell
-export cert_chain_pem=$(oc get secret -n istio-system istio.default -o json | jq -r '.data["cert-chain.pem"]')
-export key_pem=$(oc get secret -n istio-system istio.default -o json | jq -r '.data["key.pem"]')
-export root_cert_pem=$(oc get secret -n istio-system istio.default -o json | jq -r '.data["root-cert.pem"]')
-oc get ServiceMeshMemberRoll/default -n istio-system -o json | jq -r .spec > /tmp/members.json
-helm template prometheus-sre --namespace ${deploy_namespace}  -f /tmp/members.json --set istio_control_plane_name=${istio_cp_name} --set istio_control_plane_namespace=${istio_cp_namespace} --set istio_cert.cert_chain=${cert_chain_pem} --set istio_cert.key=${key_pem} --set istio_cert.root_cert=${root_cert_pem} | oc apply -f -
+export cert_chain_pem=$(oc get secret -n ${istio_cp_namespace} istio.default -o jsonpath="{.data['cert-chain\.pem']}")
+export key_pem=$(oc get secret -n ${istio_cp_namespace} istio.default -o jsonpath="{.data['key\.pem']}")
+export root_cert_pem=$(oc get secret -n ${istio_cp_namespace} istio.default -o jsonpath="{.data['root-cert\.pem']}")
+
+#Get a list of member to add a rolebinding for prometheus-istio-system in each control plane member namespace
+echo "members: $(oc get ServiceMeshMemberRoll/default -n ${istio_cp_namespace} -o jsonpath="{.spec.members}")" > /tmp/members.yaml
+
+helm template prometheus-sre --namespace ${deploy_namespace}  -f /tmp/members.yaml --set istio_control_plane.name=${istio_cp_name} --set istio_control_plane.namespace=${istio_cp_namespace} --set istio_cert.cert_chain=${cert_chain_pem} --set istio_cert.key=${key_pem} --set istio_cert.root_cert=${root_cert_pem} | oc apply -f -
+
 #wait a few minutes
 oc patch statefulset/prometheus-sre-prometheus --type='json' -p='[{"op": "add", "path": "/spec/template/spec/containers/0/args/-", "value": "--discovery.member-roll-name=default" }]' -n ${deploy_namespace}
 
@@ -46,7 +50,14 @@ oc patch statefulset/prometheus-sre-prometheus --type='json' -p='[{"op": "add", 
 ### Deploy Grafana with openshift-monitoring and sre prometheus datasources
 
 ```shell
-helm template grafana-sre --namespace ${deploy_namespace} --set prometheus_datasource.openshift_monitoring.password=$(oc get secret grafana-datasources -n openshift-monitoring -o jsonpath="{.data['prometheus\.yaml']}" | base64 -d | jq -r '.datasources[0].basicAuthPassword') | oc apply -f -
+helm template grafana-sre --namespace ${deploy_namespace} --set prometheus_datasource.openshift_monitoring.password=$(oc extract secret/grafana-datasources -n openshift-monitoring --keys=prometheus.yaml --to=- | jq -r '.datasources[0].basicAuthPassword') | oc apply -f -
+```
+If you are running Git Bash on Windows without jq you can follow:
+```shell
+oc extract secret/grafana-datasources -n openshift-monitoring --keys=prometheus.yaml --to=-
+#copy the value inside quotes for the key "basicAuthPassword" from terminal
+export basic_auth_password="paste_here"
+helm template grafana-sre --namespace ${deploy_namespace} --set prometheus_datasource.openshift_monitoring.password=${basic_auth_password} | oc apply -f -
 ```
 
 ## Error Budget Demo
