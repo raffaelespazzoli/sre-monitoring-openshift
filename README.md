@@ -55,7 +55,7 @@ The following are the steps to run the error budget demo
 
 ### Deploy bookinfo and generate load
 
-Follow instructions [here] to deploy OCP Service Mesh and bookinfo, the example app.
+Follow instructions [here](https://github.com/raffaelespazzoli/openshift-enablement-exam/tree/master/misc4.0/ServiceMesh) to deploy OCP Service Mesh and bookinfo, the example app.
 Follow the steps below to deploy locust, a load generator
 
 ```shell
