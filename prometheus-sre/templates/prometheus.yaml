@@ -6,12 +6,16 @@ metadata:
     prometheus: {{ .Values.prometheus.name }}
   namespace: {{ .Release.Namespace }}
 spec:
+  logLevel: debug
   podMetadata:
     labels:
       maistra.io/expose-route: 'true'
   secrets:
     - prometheus-k8s-tls
     - prometheus-k8s-proxy
+    - istio-certs
+  configMaps:
+    - serving-certs-ca-bundle    
   containers:
     - args:
         - '-provider=openshift'
@@ -20,8 +24,8 @@ spec:
         - '-http-address='
         - '-email-domain=*'
         - '-upstream=http://localhost:9090'
-        - '-openshift-sar={"resource": "namespaces", "verb": "get"}'
-        - '-openshift-delegate-urls={"/": {"resource": "namespaces", "verb": "get"}}'
+        - '-openshift-sar={"namespace":"{{ .Release.Namespace }}","resource":"services","verb":"list"}'
+        - '-openshift-delegate-urls={"/": {"namespace":"{{ .Release.Namespace }}","resource":"services","verb":"list"}}'
         - '-tls-cert=/etc/tls/private/tls.crt'
         - '-tls-key=/etc/tls/private/tls.key'
         - '-client-secret-file=/var/run/secrets/kubernetes.io/serviceaccount/token'
@@ -50,20 +54,27 @@ spec:
   serviceMonitorSelector: {}
   alerting:
     alertmanagers:
-    - namespace: {{ .Release.Namespace }}
-      name: {{ .Values.alertmanager.name }}
-      port: web
+      - bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+        name: alertmanager-k8s
+        namespace: {{ .Release.Namespace }}
+        port: proxy
+        scheme: https
+        tlsConfig:
+          ca: {}
+          caFile: /etc/prometheus/configmaps/serving-certs-ca-bundle/service-ca.crt
+          cert: {}
+          serverName: alertmanager-k8s.{{ .Release.Namespace }}.svc
   additionalScrapeConfigs:
     name: {{ .Values.prometheus.name }}-additional-scrape-configs
     key: prometheus-additional.yaml
-  volumeMounts:
-  - name: istio-certs
-    mountPath: /etc/istio-certs
-  volumes:
-  - name: istio-certs
-    secret:
-      secretName: istio-certs
-      defaultMode: 42
+  # volumeMounts:
+  # - name: istio-certs
+  #   mountPath: /etc/istio-certs
+  # volumes:
+  # - name: istio-certs
+  #   secret:
+  #     secretName: istio-certs
+  #     defaultMode: 42
   #serviceAccountName: prometheus
   baseImage: registry.redhat.io/openshift-service-mesh/prometheus-rhel8
   sha: 70960efc418688d96d6e9b1ee8a35905ce221cb08d9e5aefff9616e44b95cd9f
