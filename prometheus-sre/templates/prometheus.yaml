@@ -15,7 +15,8 @@ spec:
     - prometheus-k8s-proxy
     - istio-certs
   configMaps:
-    - serving-certs-ca-bundle    
+    - serving-certs-ca-bundle
+    - trusted-ca-bundle   
   containers:
     - args:
         - '-provider=openshift'
@@ -31,7 +32,7 @@ spec:
         - '-client-secret-file=/var/run/secrets/kubernetes.io/serviceaccount/token'
         - '-cookie-secret-file=/etc/proxy/secrets/session_secret'
         - '-openshift-service-account=sre-prometheus'
-        - '-openshift-ca=/etc/pki/tls/cert.pem'
+        - '-openshift-ca=/etc/configmap/trusted-ca-bundle/ca-bundle.crt'
         - '-openshift-ca=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt'
         - '-skip-auth-regex=^/metrics'
       image: 'quay.io/openshift/origin-oauth-proxy:4.6'
@@ -49,6 +50,9 @@ spec:
           name: secret-prometheus-k8s-tls
         - mountPath: /etc/proxy/secrets
           name: secret-prometheus-k8s-proxy
+        - mountPath: /etc/configmap/trusted-ca-bundle
+          name: configmap-trusted-ca-bundle
+          readOnly: true
   replicas: 2
   serviceAccountName: {{ .Values.prometheus.name }}
   serviceMonitorSelector: {}
@@ -67,15 +71,6 @@ spec:
   additionalScrapeConfigs:
     name: {{ .Values.prometheus.name }}-additional-scrape-configs
     key: prometheus-additional.yaml
-  # volumeMounts:
-  # - name: istio-certs
-  #   mountPath: /etc/istio-certs
-  # volumes:
-  # - name: istio-certs
-  #   secret:
-  #     secretName: istio-certs
-  #     defaultMode: 42
-  #serviceAccountName: prometheus
   baseImage: registry.redhat.io/openshift-service-mesh/prometheus-rhel8
   sha: 70960efc418688d96d6e9b1ee8a35905ce221cb08d9e5aefff9616e44b95cd9f
   ruleSelector:
