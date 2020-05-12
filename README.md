@@ -45,7 +45,6 @@ oc patch statefulset/prometheus-sre-prometheus --type='json' -p='[{"op": "add", 
 
 oc patch statefulset/prometheus-sre-prometheus --type='json' -p='[{"op": "add", "path": "/spec/template/spec/containers/0/args/-", "value": "--discovery.member-roll-namespace='${istio_cp_namespace}'" }]' -n ${deploy_namespace}
 
-oc patch statefulset/prometheus-sre-prometheus --type='json' -p='[{"op": "add", "path": "/spec/template/spec/containers/0/volumeMounts/-", "value":  { "name": "istio-certs", "mountPath": "/etc/istio-certs" }  }]' -n ${deploy_namespace}
 ```
 
 ### Deploy Grafana with openshift-monitoring and sre prometheus datasources
@@ -67,7 +66,7 @@ The following are the steps to run the error budget demo
 
 ### Deploy bookinfo and generate load
 
-Follow instructions [here] to deploy OCP Service Mesh and bookinfo, the example app.
+Follow instructions [here](https://github.com/raffaelespazzoli/openshift-enablement-exam/tree/master/misc4.0/ServiceMesh) to deploy OCP Service Mesh and bookinfo, the example app.
 Follow the steps below to deploy locust, a load generator
 
 ```shell
