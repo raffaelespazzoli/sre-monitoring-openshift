@@ -73,6 +73,7 @@ Follow the steps below to deploy locust, a load generator
 oc new-project locust
 export istio_gateway_url=$(oc get route istio-ingressgateway -n istio-system -o jsonpath='{.spec.host}')
 oc create configmap locust-tasks --from-file=tasks.py=./locust/locustfile.py -n locust
+helm repo add stable https://kubernetes-charts.storage.googleapis.com
 helm install stable/locust --namespace locust --set master.config.target-host=http://$istio_gateway_url -f ./locust/values.yaml --name-template locust
 oc expose service locust-master-svc --port 8089 --name locust -n locust
 ```
