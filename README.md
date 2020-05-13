@@ -52,7 +52,9 @@ oc patch statefulset/prometheus-sre-prometheus --type='json' -p='[{"op": "add", 
 ```shell
 helm template grafana-sre --namespace ${deploy_namespace} --set prometheus_datasource.openshift_monitoring.password=$(oc extract secret/grafana-datasources -n openshift-monitoring --keys=prometheus.yaml --to=- | jq -r '.datasources[0].basicAuthPassword') | oc apply -f -
 ```
+
 If you are running Git Bash on Windows without jq you can follow:
+
 ```shell
 oc extract secret/grafana-datasources -n openshift-monitoring --keys=prometheus.yaml --to=-
 #copy the value inside quotes for the key "basicAuthPassword" from terminal

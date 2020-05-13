@@ -1,0 +1,710 @@
+---
+# Source: prometheus-sre/templates/alertmanager-service-account.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: sre-alertmanager
+  namespace: sre-monitoring
+  annotations:
+    serviceaccounts.openshift.io/oauth-redirectreference.primary: '{"kind":"OAuthRedirectReference","apiVersion":"v1","reference":{"kind":"Route","name":"sre-alertmanager"}}'
+---
+# Source: prometheus-sre/templates/service-account.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: sre-prometheus
+  namespace: sre-monitoring
+  annotations:
+    serviceaccounts.openshift.io/oauth-redirectreference.primary: '{"kind":"OAuthRedirectReference","apiVersion":"v1","reference":{"kind":"Route","name":"sre-prometheus"}}'
+---
+# Source: prometheus-sre/templates/additional-scrape-config-secret.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: sre-prometheus-additional-scrape-configs
+  namespace: sre-monitoring 
+stringData:
+  prometheus-additional.yaml: |
+    - job_name: 'istio-mesh'
+      kubernetes_sd_configs:
+      - role: endpoints
+        namespaces:
+          names:
+            
+          - bookinfo
+            
+          - sre-monitoring
+          
+
+      relabel_configs:
+      - source_labels: [__meta_kubernetes_service_name, __meta_kubernetes_endpoint_port_name]
+        action: keep
+        regex: istio-telemetry;prometheus
+
+    # Scrape config for envoy stats
+    - job_name: 'envoy-stats'
+      metrics_path: /stats/prometheus
+      kubernetes_sd_configs:
+      - role: pod
+
+      relabel_configs:
+      - source_labels: [__meta_kubernetes_pod_container_port_name]
+        action: keep
+        regex: '.*-envoy-prom'
+      - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+        action: replace
+        regex: ([^:]+)(?::\d+)?;(\d+)
+        replacement: $1:15090
+        target_label: __address__
+      - action: labelmap
+        regex: __meta_kubernetes_pod_label_(.+)
+      - source_labels: [__meta_kubernetes_namespace]
+        action: replace
+        target_label: namespace
+      - source_labels: [__meta_kubernetes_pod_name]
+        action: replace
+        target_label: pod_name
+
+      metric_relabel_configs:
+      # Exclude some of the envoy metrics that have massive cardinality
+      # This list may need to be pruned further moving forward, as informed
+      # by performance and scalability testing.
+      - source_labels: [ cluster_name ]
+        regex: '(outbound|inbound|prometheus_stats).*'
+        action: drop
+      - source_labels: [ tcp_prefix ]
+        regex: '(outbound|inbound|prometheus_stats).*'
+        action: drop
+      - source_labels: [ listener_address ]
+        regex: '(.+)'
+        action: drop
+      - source_labels: [ http_conn_manager_listener_prefix ]
+        regex: '(.+)'
+        action: drop
+      - source_labels: [ http_conn_manager_prefix ]
+        regex: '(.+)'
+        action: drop
+      - source_labels: [ __name__ ]
+        regex: 'envoy_tls.*'
+        action: drop
+      - source_labels: [ __name__ ]
+        regex: 'envoy_tcp_downstream.*'
+        action: drop
+      - source_labels: [ __name__ ]
+        regex: 'envoy_http_(stats|admin).*'
+        action: drop
+      - source_labels: [ __name__ ]
+        regex: 'envoy_cluster_(lb|retry|bind|internal|max|original).*'
+        action: drop
+
+    - job_name: 'istio-policy'
+      kubernetes_sd_configs:
+      - role: endpoints
+        namespaces:
+          names:
+            
+          - bookinfo
+            
+          - sre-monitoring
+ 
+
+
+      relabel_configs:
+      - source_labels: [__meta_kubernetes_service_name, __meta_kubernetes_endpoint_port_name]
+        action: keep
+        regex: istio-policy;http-monitoring
+
+    - job_name: 'istio-telemetry'
+      kubernetes_sd_configs:
+      - role: endpoints
+        namespaces:
+          names:
+            
+          - bookinfo
+            
+          - sre-monitoring
+ 
+
+      relabel_configs:
+      - source_labels: [__meta_kubernetes_service_name, __meta_kubernetes_endpoint_port_name]
+        action: keep
+        regex: istio-telemetry;http-monitoring
+
+    - job_name: 'pilot'
+      kubernetes_sd_configs:
+      - role: endpoints
+        namespaces:
+          names:
+            
+          - bookinfo
+            
+          - sre-monitoring
+ 
+
+      relabel_configs:
+      - source_labels: [__meta_kubernetes_service_name, __meta_kubernetes_endpoint_port_name]
+        action: keep
+        regex: istio-pilot;http-monitoring
+
+    - job_name: 'galley'
+      kubernetes_sd_configs:
+      - role: endpoints
+        namespaces:
+          names:
+            
+          - bookinfo
+            
+          - sre-monitoring
+ 
+
+      relabel_configs:
+      - source_labels: [__meta_kubernetes_service_name, __meta_kubernetes_endpoint_port_name]
+        action: keep
+        regex: istio-galley;http-monitoring
+
+    - job_name: 'citadel'
+      kubernetes_sd_configs:
+      - role: endpoints
+        namespaces:
+          names:
+            
+          - bookinfo
+            
+          - sre-monitoring
+ 
+
+      relabel_configs:
+      - source_labels: [__meta_kubernetes_service_name, __meta_kubernetes_endpoint_port_name]
+        action: keep
+        regex: istio-citadel;http-monitoring
+
+    # scrape config for API servers
+    # config removed
+    # scrape config for nodes (kubelet)
+    # config removed
+    # Scrape config for Kubelet cAdvisor.
+    #
+    # This is required for Kubernetes 1.7.3 and later, where cAdvisor metrics
+    # (those whose names begin with 'container_') have been removed from the
+    # Kubelet metrics endpoint.  This job scrapes the cAdvisor endpoint to
+    # retrieve those metrics.
+    #
+    # In Kubernetes 1.7.0-1.7.2, these metrics are only exposed on the cAdvisor
+    # HTTP endpoint; use "replacement: /api/v1/nodes/${1}:4194/proxy/metrics"
+    # in that case (and ensure cAdvisor's HTTP server hasn't been disabled with
+    # the --cadvisor-port=0 Kubelet flag).
+    #
+    # This job is not necessary and should be removed in Kubernetes 1.6 and
+    # earlier versions, or it will cause the metrics to be scraped twice.
+    # config removed
+    # scrape config for service endpoints.
+    - job_name: 'kubernetes-service-endpoints'
+      kubernetes_sd_configs:
+      - role: endpoints
+      relabel_configs:
+      - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_scrape]
+        action: keep
+        regex: true
+      - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_scheme]
+        action: replace
+        target_label: __scheme__
+        regex: (https?)
+      - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_path]
+        action: replace
+        target_label: __metrics_path__
+        regex: (.+)
+      - source_labels: [__address__, __meta_kubernetes_service_annotation_prometheus_io_port]
+        action: replace
+        target_label: __address__
+        regex: ([^:]+)(?::\d+)?;(\d+)
+        replacement: $1:$2
+      - action: labelmap
+        regex: __meta_kubernetes_service_label_(.+)
+      - source_labels: [__meta_kubernetes_namespace]
+        action: replace
+        target_label: kubernetes_namespace
+      - source_labels: [__meta_kubernetes_service_name]
+        action: replace
+        target_label: kubernetes_name
+      - source_labels: [__meta_kubernetes_service_name, __meta_kubernetes_pod_container_port_number]
+        regex: prometheus;3001
+        action: drop
+
+    - job_name: 'kubernetes-pods'
+      kubernetes_sd_configs:
+      - role: pod
+      relabel_configs:  # If first two labels are present, pod should be scraped  by the istio-secure job.
+      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+        action: keep
+        regex: true
+      # Keep target if there's no sidecar or if prometheus.io/scheme is explicitly set to "http"
+      - source_labels: [__meta_kubernetes_pod_annotation_sidecar_istio_io_status, __meta_kubernetes_pod_annotation_prometheus_io_scheme]
+        action: keep
+        regex: ((;.*)|(.*;http))
+      - source_labels: [__meta_kubernetes_pod_annotation_istio_mtls]
+        action: drop
+        regex: (true)
+      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+        action: replace
+        target_label: __metrics_path__
+        regex: (.+)
+      - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+        action: replace
+        regex: ([^:]+)(?::\d+)?;(\d+)
+        replacement: $1:$2
+        target_label: __address__
+      - action: labelmap
+        regex: __meta_kubernetes_pod_label_(.+)
+      - source_labels: [__meta_kubernetes_namespace]
+        action: replace
+        target_label: namespace
+      - source_labels: [__meta_kubernetes_pod_name]
+        action: replace
+        target_label: pod_name
+
+    - job_name: 'kubernetes-pods-istio-secure'
+      scheme: https
+      tls_config:
+        ca_file: /etc/prometheus/secrets/istio-certs/root-cert.pem
+        cert_file: /etc/prometheus/secrets/istio-certs/cert-chain.pem
+        key_file: /etc/prometheus/secrets/istio-certs/key.pem
+        insecure_skip_verify: true  # prometheus does not support secure naming.
+      kubernetes_sd_configs:
+      - role: pod
+      relabel_configs:
+      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+        action: keep
+        regex: true
+      # sidecar status annotation is added by sidecar injector and
+      # istio_workload_mtls_ability can be specifically placed on a pod to indicate its ability to receive mtls traffic.
+      - source_labels: [__meta_kubernetes_pod_annotation_sidecar_istio_io_status, __meta_kubernetes_pod_annotation_istio_mtls]
+        action: keep
+        regex: (([^;]+);([^;]*))|(([^;]*);(true))
+      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scheme]
+        action: drop
+        regex: (http)
+      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+        action: replace
+        target_label: __metrics_path__
+        regex: (.+)
+      - source_labels: [__address__]  # Only keep address that is host:port
+        action: keep    # otherwise an extra target with ':443' is added for https scheme
+        regex: ([^:]+):(\d+)
+      - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+        action: replace
+        regex: ([^:]+)(?::\d+)?;(\d+)
+        replacement: $1:$2
+        target_label: __address__
+      - action: labelmap
+        regex: __meta_kubernetes_pod_label_(.+)
+      - source_labels: [__meta_kubernetes_namespace]
+        action: replace
+        target_label: namespace
+      - source_labels: [__meta_kubernetes_pod_name]
+        action: replace
+        target_label: pod_name
+---
+# Source: prometheus-sre/templates/alert-manager-secret.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: alertmanager-sre-alertmanager
+  namespace: sre-monitoring 
+stringData:
+  alertmanager.yaml: |
+    global:
+      resolve_timeout: 5m
+    route:
+      group_by: ['job']
+      group_wait: 30s
+      group_interval: 5m
+      repeat_interval: 12h
+      receiver: default
+    receivers: 
+    - name: default
+---
+# Source: prometheus-sre/templates/prometheus-secret.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: istio-certs
+  namespace: sre-monitoring  
+data:
+  cert-chain.pem: "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURJekNDQWd1Z0F3SUJBZ0lRV2FpdVEvR0w5ZTJqNURmNDdmbE9HekFOQmdrcWhraUc5dzBCQVFzRkFEQVkKTVJZd0ZBWURWUVFLRXcxamJIVnpkR1Z5TG14dlkyRnNNQjRYRFRJd01EVXhNekUzTXpVeU5sb1hEVEl3TURneApNVEUzTXpVeU5sb3dBRENDQVNJd0RRWUpLb1pJaHZjTkFRRUJCUUFEZ2dFUEFEQ0NBUW9DZ2dFQkFKd1liWVpqCjAveTNYQURFdzBsTjBZc210RmJDZm9MWmp6ZFBISVZxalBRa3BJM1V4V1Jwa0lURVVOQkozZXpRRzhJRGdkYnMKZ0ZFQzN2MXpkdS9EckdLazlKNFpuQlBnSjE2aCt6cmtoMGtYV0hHY2JQQU1IQkNiZHRCZ29iTGxPd1FvVEZNdQpvbnhFdG1NRktIN1dPdi9UaUF1TnMweUYxRE1tZWwwd1VzNEJWWUl3RzdNem1WYkxFZ1V6U2xVNzRhcXZtdXlPCk4rdFVkN2FEK1BUVVdwWnJUVG9PM3VuMkU5eUtKTGRUVVJOMnBkZ3R1WEpmUWdURXVNUFZPYzd4K29RRG56c3UKOE5jUHdkTHhlaHVtOW11WUM4NjlCUVd5dE5oWTNNTWwxZGRkMXZoeG5vaGV5SUFFdFgyS2RZSFFRVVdJOVJ1SgpWOEhzOWFQYXdFS3NFbFVDQXdFQUFhT0JnREIrTUE0R0ExVWREd0VCL3dRRUF3SUZvREFkQmdOVkhTVUVGakFVCkJnZ3JCZ0VGQlFjREFRWUlLd1lCQlFVSEF3SXdEQVlEVlIwVEFRSC9CQUl3QURBL0JnTlZIUkVCQWY4RU5UQXoKaGpGemNHbG1abVU2THk5amJIVnpkR1Z5TG14dlkyRnNMMjV6TDJsemRHbHZMWE41YzNSbGJTOXpZUzlrWldaaApkV3gwTUEwR0NTcUdTSWIzRFFFQkN3VUFBNElCQVFCU0ptNDN4N1JzN2ovYTRBSEVlR3N5aXpTMzJPUnRwc0o0CkRmUDV3Uk9PSkZyUWhIa1gxTnAvc0U1UElUMGVLQzBXZDBHYnAwWTJzZXdZU3UxK04waHE4NXNZaVhpVFJ1RHgKZVNDaStJVndlQkVmNTA1MFNWUHpJMkc5dUZvQm5aNU11UDNzcTNrVVp4TVJGamRNVlVQNHVRb0JXZ3IzaHBlUwpOYmdyUXFDd0hWbDB1UTVSLy9BLzZHTTZnUjZZYjZUR3VNc2xqWW5KamY1VG1yS25vN2F0ekE2VE5DWmlsNUVCCmlKTGxaY1J1czVDemhRbmpEcUNmRWxnUm94VVBoeWRGT01SV0xJK1k0U3NCU1plT1VXbEI3SldUZVlsWWF5K3EKbWNNZ1hab1ZYdmx4Zm1JYm1zM1lYNEtmbDIzak5Xb2dBaGEvQWN2cUZUeG9SbFpsSEtUMgotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg=="
+  key.pem: "LS0tLS1CRUdJTiBSU0EgUFJJVkFURSBLRVktLS0tLQpNSUlFb0FJQkFBS0NBUUVBbkJodGhtUFQvTGRjQU1URFNVM1JpeWEwVnNKK2d0bVBOMDhjaFdxTTlDU2tqZFRGClpHbVFoTVJRMEVuZDdOQWJ3Z09CMXV5QVVRTGUvWE4yNzhPc1lxVDBuaG1jRStBblhxSDdPdVNIU1JkWWNaeHMKOEF3Y0VKdDIwR0Noc3VVN0JDaE1VeTZpZkVTMll3VW9mdFk2LzlPSUM0MnpUSVhVTXlaNlhUQlN6Z0ZWZ2pBYgpzek9aVnNzU0JUTktWVHZocXErYTdJNDM2MVIzdG9QNDlOUmFsbXROT2c3ZTZmWVQzSW9rdDFOUkUzYWwyQzI1CmNsOUNCTVM0dzlVNXp2SDZoQU9mT3k3dzF3L0IwdkY2RzZiMmE1Z0x6cjBGQmJLMDJGamN3eVhWMTEzVytIR2UKaUY3SWdBUzFmWXAxZ2RCQlJZajFHNGxYd2V6MW85ckFRcXdTVlFJREFRQUJBb0lCQUFVYXEySXNtMzcxQS9ZbQplUGhKcWlOeHRZM3N1RFJSSnVTNUdvYW1VRXVmY3g0TUtoUTVlM2RMOEJTUGhjazdtTnpFUHBlbmpoNllDSENqCk9PMW9LWmZrS3ZlTWdOVUpqR0FFemZGRURjUnZGZjVKRGlyZlNuK2toY01VbGRVQ3QrWlA1d2NGVEZ6aDVsRGcKbDAxbWRmRnRtbEkrWlBHSW9zSzFiR1Rsc3A5MzBKODRNVSt5d2RQWGhxVGs2TXhjRDUwUDVMU1Mwd2I3cWtpYgpxNWxRSTRQbmE4Y2NYbmpKMzV4TmxEbDhxS0pvVzc1OW0xTnJ2cjBuSGc3aFFzUXlsMXJVV2krcUkwOExXNHA5CnJkMUlaaTdTVUdiM1FyQWk4eENuZHFqQTVrbi9ScnNUVlJ4dnJURko0RFNJOUM4UjlpUEhDV3RCSGdjZEpySW4KdWZwaHpXRUNnWUVBek05TmF2T0t4Z3lkc3ZycW5HOWZDeURmYkg3ZGxweHIzVTN2K0tldkpqM2xJWk5GVzRvcQovRkRRV1ppeGluOXNHRFJIWkVGdUlHSmhDMm9XbzVyek5PQ2h4RjYvUE9WVzVIamJtMGFYN3l2QVNLcy96aUlxClYwZXFZelpoTWN0UFdsQ2UwSjRQWExLN3hXWW9uUlVRQlhTN3ZSazNxc1F6R2MwZzVZc0lEWjBDZ1lFQXd4d20KbVZrSlNRRWxUeml2N2FnZWl5VXJIZ0hCWnVwN0J4VlNKNXJ4dlFCZkJxemNyU3A1TncvVERqOWdwLzBxYmoyWgo1ckJHdzZIdHZ3ZmdqaVVGS0NReGwzditsQ1Y4MDVNS2VycjhON2tuUzRiclJ2ZmlTemREWndJQ2crelBjZnRSClNmRG41UTZBVHNYa2NvWVBEU055S3ZRS0ZoWlFLUmVLcHZxUVZoa0NnWUFQN0NIaHFiTmxPRC9lVlVGK0RlNSsKcC95V3E3cEFaa0xBZnJta1JDMEt0UThtTUJQWlRRR1FnaHZnaTAxcUxnUFNVZVltOWl0QW0wVmVKTTVEdzkwYQpoRWd2UXdwdENvdFowY2VJNTlFU0IvMjM2SkJhVHkrcGYyblFzcjZWcDIrdzNzbXFBRS9EYmlYSTcrdENZd3ZPCjBNZHpxUTA1Mm16Nm1ZYndNWUhieFFLQmdHLzR1T0lxcWR4K3p0V2ZONy9SU3U0Wi81dXg4RGRLL0IzOWkyOTEKU2FScEVSLzRscEMrbm1BT01kYXNZcUVsOW5MYjRYWDExamF4dUlwNFQ5UGp4UWpiZEtaMkg0MFAwb3B0aVljVAp4bW1JVmRmUGJ6a0VTNWRVK05hbDNhR3Vod0xuOHlmWEhJNWsreGU2RkRmeFhiUHhrclM1NXd2ejlEOFE1cDZiCmo3Z0pBbjkwSmFGSXNpcGQ3R21NcEo0TE80OGJhVEkveTgwSnpYNktZRTUrSmwrVkV0dHNzQXVHU2lFdm5PQWYKWm1zVGFKc0kxcGJWd3JObnVUdVJFVEcrQVlYKzFWbTROMW84TXlzWWlWMTBtQ2xxWlNWZkJibHM5SG54amsrUgovallEYlJFay96REFZWlJBSTZTeUl1L3BZTWM5eE1WUkJ1ZTlnM3BVZnloUXdZVW4KLS0tLS1FTkQgUlNBIFBSSVZBVEUgS0VZLS0tLS0K"
+  root-cert.pem: "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUMzVENDQWNXZ0F3SUJBZ0lRYmw3SHJaT3hNSklucVhRaUl5R3VuakFOQmdrcWhraUc5dzBCQVFzRkFEQVkKTVJZd0ZBWURWUVFLRXcxamJIVnpkR1Z5TG14dlkyRnNNQjRYRFRJd01EVXhNekUzTXpVeU5Wb1hEVE13TURVeApNVEUzTXpVeU5Wb3dHREVXTUJRR0ExVUVDaE1OWTJ4MWMzUmxjaTVzYjJOaGJEQ0NBU0l3RFFZSktvWklodmNOCkFRRUJCUUFEZ2dFUEFEQ0NBUW9DZ2dFQkFNbTFyYzluSUZJNTRSNlJkY3FmckowT0VkRkpjNnFZckFnN0dWN2kKamtRWWVlOGlZSjNITlMyM1VtRHNVcVFPMFJlNEc5ZDc1WmpDV240UzIzTlpWSHlmNDc5MllLSFRCNzRxbE5zMwpOWWJwNittWjUvcE5melBLRDJpbkZNOUw3dm5BS01udkdmM3l3UFhQdjlUMkpzdzVBQXhLTy84UjhUQ0RWcXVlCjF4RVEzRitlNUlnY0RDcGRPU2lUOEc2VnRvNCt1UFN3UWJlRFgvOGhXeUlsK3lYUGorRHVOQzBQMDEzb3laUzQKVzRlQ0hhaUZneTdmVm1BUHRqeDhXMTdIVXp5bHpCeWl0cUpadlFNTHNHR2hDK2huZjEwaFR2MHFsK3pvdVR6bgpZRzBNbFdPVzloc1NRY3lRdGYvNGR5bmdkZVEvVTc5cFR5eHpRdXVLMEFVMW01OENBd0VBQWFNak1DRXdEZ1lEClZSMFBBUUgvQkFRREFnSUVNQThHQTFVZEV3RUIvd1FGTUFNQkFmOHdEUVlKS29aSWh2Y05BUUVMQlFBRGdnRUIKQUw2aDNvNG9ONVNha2ZjaU1Dc3ZzVGx0dG1ML1VwZFdHOG5BWTgxcEc0TEE3MGhqeU8zcEpYVmx2R0dVT3F4WgoyS3AvODBBci9wampqb1pPNEM1Nlc1SEtPNERnUzBpaWI5ZEwwUnpiVnpQMnRtNFNGOUhicWJBclBMSU1mbkNLCmg3eE5KQ0wxaDhPZVh1d1hia094MDhPVFVNUjVBZmk4YnlEQjlsMUp1NHJ4WnpkWCtOSUpySlprbk4wUFB5a1kKQnV0NnRSOHhzK1ozVjFUQTc0L3BuMEJtcGt0eFlPRTVNZzJZRmVBK2UrcDFlMmp2VWlhcWlPdkV5d29rb0NqZAovbDdDcFgzQzcwemdpeHg0R0Jsam8ySWJnbkU0Wi8xWE9XS2N4Vis3d2ZKNHFhYTNiMTFvVHJjelhKMjhGMWpDClp1NXBYenBPTWtxZTZERzdNRk4zSmJFPQotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg=="
+---
+# Source: prometheus-sre/templates/secret-alertmanager-k8s-proxy.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: alertmanager-k8s-proxy
+  namespace: sre-monitoring
+stringData:
+  session_secret: "ciao="
+---
+# Source: prometheus-sre/templates/secret-prometheus-k8s-proxy.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: prometheus-k8s-proxy
+  namespace: sre-monitoring
+stringData:
+  session_secret: "ciao="
+---
+# Source: prometheus-sre/templates/configmap-trusted-ca-bundle.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: trusted-ca-bundle
+  namespace: sre-monitoring
+  labels:
+    config.openshift.io/inject-trusted-cabundle: "true"
+---
+# Source: prometheus-sre/templates/serving-cert-ca-bundle-cm.yaml
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: serving-certs-ca-bundle
+  namespace: sre-monitoring
+  annotations:
+    service.alpha.openshift.io/inject-cabundle: 'true'
+---
+# Source: prometheus-sre/templates/alert-manager-rbac.yaml
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: sre-alertmanager
+subjects:
+- kind: ServiceAccount
+  namespace: sre-monitoring
+  name: sre-alertmanager
+roleRef:
+  kind: ClusterRole
+  name: grafana
+  apiGroup: rbac.authorization.k8s.io
+---
+# Source: prometheus-sre/templates/prometheus-rbac.yaml
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: sre-prometheus
+subjects:
+- kind: ServiceAccount
+  namespace: sre-monitoring
+  name: sre-prometheus
+roleRef:
+  kind: ClusterRole
+  name: servicemeshmemberrolls.maistra.io-v1-view
+  apiGroup: rbac.authorization.k8s.io
+---
+# Source: prometheus-sre/templates/prometheus-rbac.yaml
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: sre-alertmanager-grafana
+subjects:
+- kind: ServiceAccount
+  namespace: sre-monitoring
+  name: sre-prometheus
+roleRef:
+  kind: ClusterRole
+  name: grafana
+  apiGroup: rbac.authorization.k8s.io
+---
+# Source: prometheus-sre/templates/prometheus-rbac.yaml
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: sre-prometheus
+  namespace: bi-docistio2
+subjects:
+- kind: ServiceAccount
+  namespace: sre-monitoring
+  name: sre-prometheus
+roleRef:
+  kind: ClusterRole
+  name: prometheus-bi-docistio2
+  apiGroup: rbac.authorization.k8s.io
+---
+# Source: prometheus-sre/templates/prometheus-rbac.yaml
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: sre-prometheus
+  namespace: bookinfo
+subjects:
+- kind: ServiceAccount
+  namespace: sre-monitoring
+  name: sre-prometheus
+roleRef:
+  kind: ClusterRole
+  name: prometheus-bi-docistio2
+  apiGroup: rbac.authorization.k8s.io
+---
+# Source: prometheus-sre/templates/prometheus-rbac.yaml
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: sre-prometheus
+  namespace: sre-monitoring
+subjects:
+- kind: ServiceAccount
+  namespace: sre-monitoring
+  name: sre-prometheus
+roleRef:
+  kind: ClusterRole
+  name: prometheus-bi-docistio2
+  apiGroup: rbac.authorization.k8s.io
+---
+# Source: prometheus-sre/templates/prometheus-rbac.yaml
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: sre-prometheus
+  namespace: sre-monitoring
+subjects:
+- kind: ServiceAccount
+  namespace: sre-monitoring
+  name: sre-prometheus
+roleRef:
+  kind: ClusterRole
+  name: prometheus-bi-docistio2
+  apiGroup: rbac.authorization.k8s.io
+---
+# Source: prometheus-sre/templates/service-alermanager-k8s.yaml
+kind: Service
+apiVersion: v1
+metadata:
+  name: alertmanager-k8s
+  namespace: sre-monitoring
+  labels:
+    alertmanager: k8s
+  annotations:
+    service.alpha.openshift.io/serving-cert-secret-name: alertmanager-k8s-tls
+spec:
+  ports:
+    - name: proxy
+      protocol: TCP
+      port: 9091
+      targetPort: proxy
+  selector:
+    app: alertmanager
+  clusterIP: None
+  type: ClusterIP
+  sessionAffinity: None
+---
+# Source: prometheus-sre/templates/service-prometheus-k8s.yaml
+kind: Service
+apiVersion: v1
+metadata:
+  name: prometheus-k8s
+  namespace: sre-monitoring
+  labels:
+    prometheus: k8s
+  annotations:
+    service.alpha.openshift.io/serving-cert-secret-name: prometheus-k8s-tls
+spec:
+  ports:
+    - name: proxy
+      protocol: TCP
+      port: 9091
+      targetPort: proxy
+  selector:
+    app: prometheus
+  clusterIP: None
+  type: ClusterIP
+  sessionAffinity: None
+---
+# Source: prometheus-sre/templates/alert-manager.yaml
+apiVersion: monitoring.coreos.com/v1
+kind: Alertmanager
+metadata:
+  name: sre-alertmanager
+  namespace: sre-monitoring
+spec:
+  replicas: 2
+  serviceAccountName: sre-alertmanager
+  listenLocal: true
+  podMetadata:
+    labels:
+      maistra.io/expose-route: 'true'
+  secrets:
+    - alertmanager-k8s-tls
+    - alertmanager-k8s-proxy
+  configMaps:
+    - trusted-ca-bundle
+  containers:
+    - args:
+        - '-provider=openshift'
+        - '-pass-basic-auth=false'
+        - '-https-address=:9091'
+        - '-http-address='
+        - '-email-domain=*'
+        - '-upstream=http://localhost:9093'
+        - '-openshift-sar={"namespace":"sre-monitoring","resource":"services","verb":"list"}'
+        - '-openshift-delegate-urls={"/": {"namespace":"sre-monitoring","resource":"services","verb":"list"}}'
+        - '-tls-cert=/etc/tls/private/tls.crt'
+        - '-tls-key=/etc/tls/private/tls.key'
+        - '-client-secret-file=/var/run/secrets/kubernetes.io/serviceaccount/token'
+        - '-cookie-secret-file=/etc/proxy/secrets/session_secret'
+        - '-openshift-service-account=sre-alertmanager'
+        - '-openshift-ca=/etc/configmap/trusted-ca-bundle/ca-bundle.crt'
+        - '-openshift-ca=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt'
+        - '-skip-auth-regex=^/metrics'
+      image: 'quay.io/openshift/origin-oauth-proxy:4.6'
+      name: alertmanager-proxy
+      ports:
+        - containerPort: 9091
+          name: proxy
+      resources:
+        requests:
+          cpu: 10m
+          memory: 20Mi
+      terminationMessagePolicy: FallbackToLogsOnError
+      volumeMounts:
+        - mountPath: /etc/tls/private
+          name: secret-alertmanager-k8s-tls
+        - mountPath: /etc/proxy/secrets
+          name: secret-alertmanager-k8s-proxy
+        - mountPath: /etc/configmap/trusted-ca-bundle
+          name: configmap-trusted-ca-bundle
+          readOnly: true
+---
+# Source: prometheus-sre/templates/prometheus.yaml
+apiVersion: monitoring.coreos.com/v1
+kind: Prometheus
+metadata:
+  name: sre-prometheus
+  labels:
+    prometheus: sre-prometheus
+  namespace: sre-monitoring
+spec:
+  logLevel: debug
+  podMetadata:
+    labels:
+      maistra.io/expose-route: 'true'
+  secrets:
+    - prometheus-k8s-tls
+    - prometheus-k8s-proxy
+    - istio-certs
+  configMaps:
+    - serving-certs-ca-bundle
+    - trusted-ca-bundle   
+  containers:
+    - args:
+        - '-provider=openshift'
+        - '-pass-basic-auth=false'
+        - '-https-address=:9091'
+        - '-http-address='
+        - '-email-domain=*'
+        - '-upstream=http://localhost:9090'
+        - '-openshift-sar={"namespace":"sre-monitoring","resource":"services","verb":"list"}'
+        - '-openshift-delegate-urls={"/": {"namespace":"sre-monitoring","resource":"services","verb":"list"}}'
+        - '-tls-cert=/etc/tls/private/tls.crt'
+        - '-tls-key=/etc/tls/private/tls.key'
+        - '-client-secret-file=/var/run/secrets/kubernetes.io/serviceaccount/token'
+        - '-cookie-secret-file=/etc/proxy/secrets/session_secret'
+        - '-openshift-service-account=sre-prometheus'
+        - '-openshift-ca=/etc/configmap/trusted-ca-bundle/ca-bundle.crt'
+        - '-openshift-ca=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt'
+        - '-skip-auth-regex=^/metrics'
+      image: 'quay.io/openshift/origin-oauth-proxy:4.6'
+      name: prometheus-proxy
+      ports:
+        - containerPort: 9091
+          name: proxy
+      resources:
+        requests:
+          cpu: 10m
+          memory: 20Mi
+      terminationMessagePolicy: FallbackToLogsOnError
+      volumeMounts:
+        - mountPath: /etc/tls/private
+          name: secret-prometheus-k8s-tls
+        - mountPath: /etc/proxy/secrets
+          name: secret-prometheus-k8s-proxy
+        - mountPath: /etc/configmap/trusted-ca-bundle
+          name: configmap-trusted-ca-bundle
+          readOnly: true
+  replicas: 2
+  serviceAccountName: sre-prometheus
+  serviceMonitorSelector: {}
+  alerting:
+    alertmanagers:
+      - bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+        name: alertmanager-k8s
+        namespace: sre-monitoring
+        port: proxy
+        scheme: https
+        tlsConfig:
+          ca: {}
+          caFile: /etc/prometheus/configmaps/serving-certs-ca-bundle/service-ca.crt
+          cert: {}
+          serverName: alertmanager-k8s.sre-monitoring.svc
+  additionalScrapeConfigs:
+    name: sre-prometheus-additional-scrape-configs
+    key: prometheus-additional.yaml
+  baseImage: registry.redhat.io/openshift-service-mesh/prometheus-rhel8
+  sha: 70960efc418688d96d6e9b1ee8a35905ce221cb08d9e5aefff9616e44b95cd9f
+  ruleSelector:
+    matchLabels: 
+      sre-monitoring: "true"
+  serviceMonitorSelector: 
+    matchLabels: 
+      sre-monitoring: "true"
+  podMonitorSelector:
+    matchLabels:
+      sre-monitoring: "true"
+  ruleNamespaceSelector:
+    matchLabels:
+      maistra.io/member-of: bi-docistio2
+  serviceMonitorNamespaceSelector:
+    matchLabels:
+      maistra.io/member-of: bi-docistio2
+  podMonitorNamespaceSelector:
+    matchLabels:
+      maistra.io/member-of: bi-docistio2
+---
+# Source: prometheus-sre/templates/alertmanager-route.yaml
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: sre-alertmanager
+  namespace: sre-monitoring
+spec:
+  port:
+    targetPort: proxy
+  tls:
+    insecureEdgeTerminationPolicy: Redirect
+    termination: reencrypt
+  to:
+    kind: Service
+    name: alertmanager-k8s
+---
+# Source: prometheus-sre/templates/prometheus-route.yaml
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: sre-prometheus
+  namespace: sre-monitoring
+spec:
+  port:
+    targetPort: proxy
+  tls:
+    insecureEdgeTerminationPolicy: Redirect
+    termination: reencrypt
+  to:
+    kind: Service
+    name: prometheus-k8s
+---
+# Source: prometheus-sre/templates/servicemeshmember-default.yaml
+apiVersion: maistra.io/v1
+kind: ServiceMeshMember
+metadata:
+  name: default
+  namespace: sre-monitoring
+spec:
+  controlPlaneRef:
+    name: basic-install
+    namespace: bi-docistio2
