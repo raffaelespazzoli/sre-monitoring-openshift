@@ -22,7 +22,7 @@ subjects:
   name: {{ .Values.prometheus.name }}
 roleRef:
   kind: ClusterRole
-  name: prometheus-istio-system
+  name: {{ printf "%s-%s" "prometheus" .Values.istio_control_plane.namespace }}
   apiGroup: rbac.authorization.k8s.io
 {{ $params:= . }}
 {{ range $index, $namespace := .Values.members }}
@@ -38,7 +38,7 @@ subjects:
   name: {{ $params.Values.prometheus.name }}
 roleRef:
   kind: ClusterRole
-  name: prometheus-istio-system
+  name: {{ printf "%s-%s" "prometheus" $params.Values.istio_control_plane.namespace }}
   apiGroup: rbac.authorization.k8s.io
 {{ end }}
 ---
@@ -53,7 +53,7 @@ subjects:
   name: {{ .Values.prometheus.name }}
 roleRef:
   kind: ClusterRole
-  name: prometheus-istio-system
+  name: {{ printf "%s-%s" "prometheus" .Values.istio_control_plane.namespace }}
   apiGroup: rbac.authorization.k8s.io
 ---
 kind: ClusterRoleBinding
