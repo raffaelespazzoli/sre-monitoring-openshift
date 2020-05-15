@@ -16,7 +16,7 @@
   "gnetId": null,
   "graphTooltip": 0,
   "id": 17,
-  "iteration": 1589073325894,
+  "iteration": 1589388725169,
   "links": [],
   "panels": [
     {
@@ -76,7 +76,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Error Budget with katency",
+      "title": "Error Budget",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -93,7 +93,7 @@
       "yaxes": [
         {
           "format": "percentunit",
-          "label": null,
+          "label": "availability",
           "logBase": 1,
           "max": null,
           "min": null,
@@ -112,6 +112,59 @@
         "align": false,
         "alignLevel": null
       }
+    },
+    {
+      "datasource": "prometheus-istio-system",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 0
+      },
+      "id": 6,
+      "options": {
+        "fieldOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "defaults": {
+            "decimals": 0,
+            "mappings": [],
+            "max": 1,
+            "min": 0,
+            "thresholds": [
+              {
+                "color": "dark-red",
+                "value": null
+              },
+              {
+                "color": "dark-green",
+                "value": 0.95
+              }
+            ],
+            "title": "Error Budget",
+            "unit": "percentunit"
+          },
+          "override": {},
+          "values": false
+        },
+        "orientation": "auto",
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true
+      },
+      "pluginVersion": "6.5.1",
+      "repeat": "virtual_service",
+      "repeatDirection": "h",
+      "targets": [
+        {
+          "expr": "sum(increase(istio_request_duration_seconds_bucket{connection_security_policy!=\"none\",destination_service=\"$virtual_service\",response_code!~\"5.*\",le=\"$latency\"}[$time_interval]))/sum(increase(istio_request_duration_seconds_bucket{connection_security_policy!=\"none\",destination_service=\"$virtual_service\",le=\"+Inf\"}[$time_interval]))",
+          "refId": "A"
+        }
+      ],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "Error Budget",
+      "type": "gauge"
     },
     {
       "aliasColors": {},
@@ -156,13 +209,13 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(increase(istio_requests_total{connection_security_policy!=\"none\",destination_service=\"$virtual_service\",response_code!~\"5.*\"}[$time_interval]))/sum(increase(istio_requests_total{connection_security_policy!=\"none\",destination_service=\"$virtual_service\"}[$time_interval]))  ",
+          "expr": "(100-$SLO)/100*sum(increase(istio_request_duration_seconds_bucket{connection_security_policy!=\"none\",destination_service=\"$virtual_service\",response_code!~\"5.*\",le=\"$latency\"}[$time_interval]))",
           "legendFormat": "error budget",
           "refId": "A"
         },
         {
-          "expr": "$SLO/100",
-          "legendFormat": "SLO",
+          "expr": "(sum(increase(istio_request_duration_seconds_bucket{connection_security_policy!=\"none\",destination_service=\"$virtual_service\",le=\"+Inf\"}[$time_interval]))-sum(increase(istio_request_duration_seconds_bucket{connection_security_policy!=\"none\",destination_service=\"$virtual_service\",response_code!~\"5.*\",le=\"$latency\"}[$time_interval])))",
+          "legendFormat": "failed requests",
           "refId": "B"
         }
       ],
@@ -186,8 +239,8 @@
       },
       "yaxes": [
         {
-          "format": "percentunit",
-          "label": "Availability",
+          "format": "none",
+          "label": "",
           "logBase": 1,
           "max": null,
           "min": null,
@@ -206,6 +259,94 @@
         "align": false,
         "alignLevel": null
       }
+    },
+    {
+      "cacheTimeout": null,
+      "colorBackground": true,
+      "colorValue": false,
+      "colors": [
+        "#d44a3a",
+        "rgba(237, 129, 40, 0.89)",
+        "#299c46"
+      ],
+      "datasource": "prometheus-istio-system",
+      "format": "none",
+      "gauge": {
+        "maxValue": 100,
+        "minValue": 0,
+        "show": false,
+        "thresholdLabels": false,
+        "thresholdMarkers": true
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 8
+      },
+      "id": 8,
+      "interval": null,
+      "links": [],
+      "mappingType": 2,
+      "mappingTypes": [
+        {
+          "name": "value to text",
+          "value": 1
+        },
+        {
+          "name": "range to text",
+          "value": 2
+        }
+      ],
+      "maxDataPoints": 100,
+      "nullPointMode": "connected",
+      "nullText": null,
+      "options": {},
+      "postfix": "",
+      "postfixFontSize": "50%",
+      "prefix": "",
+      "prefixFontSize": "50%",
+      "rangeMaps": [
+        {
+          "from": "0",
+          "text": "out of budget",
+          "to": ".95"
+        },
+        {
+          "from": ".95",
+          "text": "budget available",
+          "to": "1"
+        }
+      ],
+      "sparkline": {
+        "fillColor": "rgba(31, 118, 189, 0.18)",
+        "full": true,
+        "lineColor": "rgb(31, 120, 193)",
+        "show": true,
+        "ymax": 1,
+        "ymin": 0
+      },
+      "tableColumn": "",
+      "targets": [
+        {
+          "expr": "sum(increase(istio_request_duration_seconds_bucket{connection_security_policy!=\"none\",destination_service=\"$virtual_service\",response_code!~\"5.*\",le=\"$latency\"}[$time_interval]))/sum(increase(istio_request_duration_seconds_bucket{connection_security_policy!=\"none\",destination_service=\"$virtual_service\",le=\"+Inf\"}[$time_interval]))",
+          "refId": "A"
+        }
+      ],
+      "thresholds": "0.94,0.96",
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "Error Budget",
+      "type": "singlestat",
+      "valueFontSize": "80%",
+      "valueMaps": [
+        {
+          "op": "=",
+          "text": "N/A",
+          "value": "null"
+        }
+      ],
+      "valueName": "current"
     }
   ],
   "refresh": "5s",
@@ -217,8 +358,8 @@
       {
         "allValue": null,
         "current": {
-          "text": "details.bookinfo.svc.cluster.local",
-          "value": "details.bookinfo.svc.cluster.local"
+          "text": "ratings.bookinfo.svc.cluster.local",
+          "value": "ratings.bookinfo.svc.cluster.local"
         },
         "datasource": "prometheus-istio-system",
         "definition": "label_values(istio_requests_total, destination_service)",
@@ -433,5 +574,5 @@
   "timezone": "",
   "title": "Error Budget",
   "uid": "AqEG4weWk",
-  "version": 3
+  "version": 7
 }
