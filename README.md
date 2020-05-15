@@ -1,8 +1,8 @@
 # SRE Monitoring for OCP
 
-## Pormetheus and Grafana deployment
+## Prometheus and Grafana deployment
 
-The following are the steps to deploy a parallel grafan/prometheus/alertmanager stack to what comes up with ServiceMesh
+The following are the steps to deploy a parallel grafana/prometheus/alert-manager stack to what comes up with ServiceMesh
 
 ### Preparation
 
@@ -76,7 +76,7 @@ oc new-project locust
 export istio_gateway_url=$(oc get route istio-ingressgateway -n istio-system -o jsonpath='{.spec.host}')
 oc create configmap locust-tasks --from-file=tasks.py=./locust/locustfile.py -n locust
 helm repo add stable https://kubernetes-charts.storage.googleapis.com
-helm install stable/locust --namespace locust --set master.config.target-host=http://$istio_gateway_url -f ./locust/values.yaml --name-template locust
+helm install stable/locust --namespace locust --set master.config.target-host=http://${istio_gateway_url} -f ./locust/values.yaml --name-template locust
 oc expose service locust-master-svc --port 8089 --name locust -n locust
 ```
 
@@ -96,7 +96,7 @@ oc apply -f failure-injection.yaml -n bookinfo
 ### create SLO-based alerts
 
 ```shell
-helm template sre-service-monitor-istio --namespace $deploy_namespace{} --set slo_percent=95 --set prometheus=sre-prometheus | oc apply -f -
+helm template sre-service-monitor-istio --namespace ${deploy_namespace} --set slo_percent=95 --set prometheus=sre-prometheus | oc apply -f -
 ```
 
 ## Notes
