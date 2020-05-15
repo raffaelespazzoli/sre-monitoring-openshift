@@ -1,0 +1,13 @@
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: {{ printf "%s-maistra-view-%s" .Values.prometheus.name .Release.Namespace }}
+subjects:
+- kind: ServiceAccount
+  namespace: {{ .Release.Namespace }}
+  name: {{ .Values.prometheus.name }}
+roleRef:
+  kind: ClusterRole
+  name: servicemeshmemberrolls.maistra.io-v1-view
+  apiGroup: rbac.authorization.k8s.io  

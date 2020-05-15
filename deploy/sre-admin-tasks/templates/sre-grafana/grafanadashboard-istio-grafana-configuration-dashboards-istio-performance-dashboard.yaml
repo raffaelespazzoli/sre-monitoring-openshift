@@ -1,0 +1,11 @@
+---
+apiVersion: integreatly.org/v1alpha1
+kind: GrafanaDashboard
+metadata:
+  name: istio-grafana-configuration-dashboards-istio-performance-dashboard
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: grafana
+spec:
+  name: istio-performance-dashboard.json
+  json: {{ .Files.Get "dashboards/istio-system/istio-performance-dashboard.json" | toPrettyJson }}

@@ -1,0 +1,46 @@
+---
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: {{ .Values.prometheus.name }}
+  namespace: {{ .Values.istio_control_plane.namespace }}
+subjects:
+- kind: ServiceAccount
+  namespace: {{ .Release.Namespace }}
+  name: {{ .Values.prometheus.name }}
+roleRef:
+  kind: ClusterRole
+  name: {{ printf "%s-%s" "prometheus" .Values.istio_control_plane.namespace }}
+  apiGroup: rbac.authorization.k8s.io
+---
+{{ $params:= . }}
+{{ range $index, $namespace := .Values.members }}
+---
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: {{ $params.Values.prometheus.name }}
+  namespace: {{ $namespace }}
+subjects:
+- kind: ServiceAccount
+  namespace: {{ $params.Release.Namespace }}
+  name: {{ $params.Values.prometheus.name }}
+roleRef:
+  kind: ClusterRole
+  name: {{ printf "%s-%s" "prometheus" $params.Values.istio_control_plane.namespace }}
+  apiGroup: rbac.authorization.k8s.io
+{{ end }}
+---
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: {{ .Values.prometheus.name }}
+  namespace: {{ .Release.Namespace }}
+subjects:
+- kind: ServiceAccount
+  namespace: {{ .Release.Namespace }}
+  name: {{ .Values.prometheus.name }}
+roleRef:
+  kind: ClusterRole
+  name: {{ printf "%s-%s" "prometheus" .Values.istio_control_plane.namespace }}
+  apiGroup: rbac.authorization.k8s.io   
