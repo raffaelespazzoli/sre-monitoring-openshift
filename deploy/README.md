@@ -27,11 +27,25 @@ export basicAuthPassword=$(oc extract secret/grafana-datasources -n openshift-mo
 helm template cluster-admin-tasks --namespace ${deploy_namespace} --set secrets.basicAuthPassword=${basicAuthPassword} --set istio_control_plane.namespace=${istio_cp_namespace} -f /tmp/members.yaml | oc apply -f -
 ```
 
+### sre-admin-operators
+
+These tasks must be run by an admin on the service mesh and all service mesh member namespaces.
+
+```shell
+helm template sre-admin-operators --namespace ${deploy_namespace} | oc apply -f -
+
+#Wait about 5 minutes for the prometheus operator to install
+```
+
 ### sre-admin-tasks
 
 These tasks must be run by an admin on the service mesh and all service mesh member namespaces.
 
 ```shell
+
+helm template sre-admin-operators --namespace ${deploy_namespace} | oc apply -f -
+
+
 export cert_chain_pem=$(oc get secret -n ${istio_cp_namespace} istio.default -o jsonpath="{.data['cert-chain\.pem']}")
 export key_pem=$(oc get secret -n ${istio_cp_namespace} istio.default -o jsonpath="{.data['key\.pem']}")
 export root_cert_pem=$(oc get secret -n ${istio_cp_namespace} istio.default -o jsonpath="{.data['root-cert\.pem']}")
