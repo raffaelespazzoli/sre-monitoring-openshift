@@ -29,7 +29,7 @@ helm template cluster-admin-tasks --namespace ${deploy_namespace} --set secrets.
 
 ### sre-admin-operators
 
-These tasks must be run by an admin on the service mesh and all service mesh member namespaces.
+These tasks must be run by an admin on the ${deploy_namespace} project.
 
 ```shell
 helm template sre-admin-operators --namespace ${deploy_namespace} | oc apply -f -
@@ -39,12 +39,9 @@ helm template sre-admin-operators --namespace ${deploy_namespace} | oc apply -f 
 
 ### sre-admin-tasks
 
-These tasks must be run by an admin on the service mesh and all service mesh member namespaces.
+These tasks must be run by an admin on both ${deploy_namespace} and ${istio_cp_namespace} projects.
 
 ```shell
-
-helm template sre-admin-operators --namespace ${deploy_namespace} | oc apply -f -
-
 
 export cert_chain_pem=$(oc get secret -n ${istio_cp_namespace} istio.default -o jsonpath="{.data['cert-chain\.pem']}")
 export key_pem=$(oc get secret -n ${istio_cp_namespace} istio.default -o jsonpath="{.data['key\.pem']}")
