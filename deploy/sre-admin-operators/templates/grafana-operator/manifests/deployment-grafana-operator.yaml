@@ -25,6 +25,9 @@ spec:
             name: metrics
           command:
           - grafana-operator
+          args:
+          - '--grafana-image=docker.io/grafana/grafana'
+          - '--grafana-image-tag=6.5.1'
           imagePullPolicy: Always
           readinessProbe:
             exec:
