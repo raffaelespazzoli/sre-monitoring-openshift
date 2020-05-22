@@ -24,6 +24,8 @@ echo "members: $(oc get ServiceMeshMemberRoll/default -n ${istio_cp_namespace} -
 
 export basicAuthPassword=$(oc extract secret/grafana-datasources -n openshift-monitoring --keys=prometheus.yaml --to=- | jq -r '.datasources[0].basicAuthPassword')
 
+oc adm policy add-cluster-role-to-group system:auth-delegator system:serviceaccounts:${deploy_namespace} --rolebinding-name=oauth-proxy-serviceaccounts
+
 helm template cluster-admin-tasks --namespace ${deploy_namespace} --set secrets.basicAuthPassword=${basicAuthPassword} --set istio_control_plane.namespace=${istio_cp_namespace} -f /tmp/members.yaml | oc apply -f -
 ```
 
