@@ -1,5 +1,8 @@
 # SRE Monitoring for OCP
 
+This set-up assumes that you have installed ServiceMesh in the istio-system namespace and deployed the bookinfo app in the bookinfo namespace.
+Instructions to do so can be found [here](https://github.com/raffaelespazzoli/openshift-enablement-exam/tree/master/misc4.0/ServiceMesh)
+
 ## Prometheus and Grafana deployment
 
 The following are the steps to deploy a parallel grafana/prometheus/alert-manager stack to what comes up with ServiceMesh
@@ -41,10 +44,7 @@ echo "members: $(oc get ServiceMeshMemberRoll/default -n ${istio_cp_namespace} -
 helm template prometheus-sre --namespace ${deploy_namespace}  -f /tmp/members.yaml --set istio_control_plane.name=${istio_cp_name} --set istio_control_plane.namespace=${istio_cp_namespace} --set istio_cert.cert_chain=${cert_chain_pem} --set istio_cert.key=${key_pem} --set istio_cert.root_cert=${root_cert_pem} | oc apply -f -
 
 #wait a few minutes
-#oc patch statefulset/prometheus-sre-prometheus --type='json' -p='[{"op": "add", "path": "/spec/template/spec/containers/0/args/-", "value": "--discovery.member-roll-name=default" }]' -n ${deploy_namespace}
-
 oc patch statefulset/prometheus-sre-prometheus --type='json' -p='[{"op": "add", "path": "/spec/template/spec/containers/0/args/-", "value": "--discovery.member-roll-namespace='${istio_cp_namespace}'" }, {"op": "add", "path": "/spec/template/spec/containers/0/args/-", "value": "--discovery.member-roll-name=default" }]' -n ${deploy_namespace}
-
 ```
 
 ### Deploy Grafana with openshift-monitoring and sre prometheus datasources
@@ -96,27 +96,5 @@ oc apply -f failure-injection.yaml -n bookinfo
 ### create SLO-based alerts
 
 ```shell
-helm template sre-service-monitor-istio --namespace ${deploy_namespace} --set slo_percent=95 --set prometheus=sre-prometheus | oc apply -f -
+helm template sre-service-monitor-istio --namespace ${deploy_namespace} --set slo_percent=95 --set latency=1 --set prometheus=sre-prometheus --set destination_service=details.bookinfo.svc.cluster.local --set metrics_labels.destination_service_namespace=bookinfo | oc apply -f -
 ```
-
-## Notes
-
-[chao-smesh](https://github.com/pingcap/chaos-mesh)
-
-### Monitoring the master-api
-
-```shell
-helm template sre-service-monitor --namespace openshift-monitoring --values ./master-api-values.yaml | oc apply -f -
-```
-
-### Useful PromQL
-
-error rate:
-
-sum(rate(istio_requests_total{destination_service_namespace="bookinfo",destination_service="details.bookinfo.svc.cluster.local",response_code!~"5.*"}[5m]))/sum(rate(istio_requests_total{destination_service_namespace="bookinfo",destination_service="details.bookinfo.svc.cluster.local"}[5m]))
-
-sum(increase(istio_requests_total{connection_security_policy!="none",destination_service="$virtual_service",response_code!~"5.*"}[$time_interval]))/sum(increase(istio_requests_total{connection_security_policy!="none",destination_service="$virtual_service"}[$time_interval]))  
-
-sum(increase(istio_request_duration_seconds_bucket{connection_security_policy!="none",destination_service="$virtual_service",response_code!~"5.*",le="$latency"}[$time_interval]))/sum(increase(istio_request_duration_seconds_bucket{connection_security_policy!="none",destination_service="$virtual_service",le="+Inf"}[$time_interval]))
-
-istio_request_duration_seconds_bucket{connection_security_policy!="none",destination_service="$virtual_service",response_code!~"5.*"}
