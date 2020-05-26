@@ -1,0 +1,14 @@
+---
+alertmanager:
+  name: sre-alertmanager
+prometheus:
+  name: sre-prometheus
+grafana:
+  name: sre-grafana
+prometheus_datasource:
+  openshift_monitoring:
+    password: "TODO"
+  istio_system:
+    password: "TODO"
+session:
+  secret: ciao

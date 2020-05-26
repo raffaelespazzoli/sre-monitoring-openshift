@@ -1,0 +1,10 @@
+---
+apiVersion: maistra.io/v1
+kind: ServiceMeshMember
+metadata:
+  name: default
+  namespace: {{ .Release.Namespace }}
+spec:
+  controlPlaneRef:
+    name: {{ .Values.istio_control_plane.name }}
+    namespace: {{ .Values.istio_control_plane.namespace }}
