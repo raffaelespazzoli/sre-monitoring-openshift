@@ -22,7 +22,7 @@ These must be run by a cluster admin.
 #Get a list of members to add a rolebinding using grafanadatasource-prometheus-istio-system.yaml in each control plane member namespace
 echo "members: $(oc get ServiceMeshMemberRoll/default -n ${istio_cp_namespace} -o jsonpath="{.spec.members}" | sed s'/ /, /g')" > /tmp/members.yaml
 
-export basicAuthPassword=$(oc extract secret/grafana-datasources -n openshift-monitoring --keys=prometheus.yaml --to=- | jq -r '.datasources[0].basicAuthPassword')
+export basicAuthPassword=$(oc extract secret/grafana-datasources -n openshift-monitoring --keys=prometheus.yaml --to=- | grep -zoP '"basicAuthPassword":\s*"\K[^\s,]*(?=\s*",)')
 
 oc adm policy add-cluster-role-to-group system:auth-delegator system:serviceaccounts:${deploy_namespace} --rolebinding-name=oauth-proxy-serviceaccounts
 
