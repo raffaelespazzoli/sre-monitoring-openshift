@@ -41,7 +41,10 @@ spec:
       ports:
         - containerPort: 9091
           name: grafana-proxy
-      resources: {}
+      resources:
+        requests:
+          cpu: 10m
+          memory: 20Mi
       volumeMounts:
         - mountPath: /etc/tls/private
           name: secret-grafana-k8s-tls

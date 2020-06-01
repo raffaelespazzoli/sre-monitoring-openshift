@@ -7,6 +7,10 @@ metadata:
     prometheus: {{ .Values.prometheus.name }}
   namespace: {{ .Release.Namespace }}
 spec:
+  resources:
+    requests:
+      memory: 256Mi
+      cpu: 300m
   logLevel: debug
   podMetadata:
     labels:

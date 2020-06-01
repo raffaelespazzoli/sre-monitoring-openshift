@@ -6,6 +6,10 @@ metadata:
   namespace: {{ .Release.Namespace }}
 spec:
   replicas: 2
+  resources:
+    requests:
+      memory: 128Mi
+      cpu: 50m
   serviceAccountName: {{ .Values.alertmanager.name }}
   listenLocal: true
   podMetadata:
