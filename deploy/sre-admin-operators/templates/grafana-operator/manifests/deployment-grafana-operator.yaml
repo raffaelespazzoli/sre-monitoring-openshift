@@ -50,3 +50,7 @@ spec:
                   fieldPath: metadata.name
             - name: OPERATOR_NAME
               value: "grafana-operator"
+          resources:
+            requests:
+              cpu: 50m
+              memory: 70Mi
