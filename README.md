@@ -44,7 +44,9 @@ echo "members: $(oc get ServiceMeshMemberRoll/default -n ${istio_cp_namespace} -
 helm template prometheus-sre --namespace ${deploy_namespace}  -f /tmp/members.yaml --set istio_control_plane.name=${istio_cp_name} --set istio_control_plane.namespace=${istio_cp_namespace} --set istio_cert.cert_chain=${cert_chain_pem} --set istio_cert.key=${key_pem} --set istio_cert.root_cert=${root_cert_pem} | oc apply -f -
 
 #wait a few minutes
-oc patch statefulset/prometheus-sre-prometheus --type='json' -p='[{"op": "add", "path": "/spec/template/spec/containers/0/args/-", "value": "--discovery.member-roll-namespace='${istio_cp_namespace}'" }, {"op": "add", "path": "/spec/template/spec/containers/0/args/-", "value": "--discovery.member-roll-name=default" }]' -n ${deploy_namespace}
+if [ -z "$(oc get statefulset/prometheus-sre-prometheus -o jsonpath={.spec.template.spec.containers[0].args} | grep discovery.member-roll-name\=default)" ]; then oc patch statefulset/prometheus-sre-prometheus --type='json' -p='[{"op": "add", "path": "/spec/template/spec/containers/0/args/-", "value": "--discovery.member-roll-name=default" }]' -n ${deploy_namespace}; fi
+
+if [ -z "$(oc get statefulset/prometheus-sre-prometheus -o jsonpath={.spec.template.spec.containers[0].args} | grep discovery.member-roll-namespace\=${istio_cp_namespace})" ]; then oc patch statefulset/prometheus-sre-prometheus --type='json' -p='[{"op": "add", "path": "/spec/template/spec/containers/0/args/-", "value": "--discovery.member-roll-namespace='${istio_cp_namespace}'" }]' -n ${deploy_namespace}; fi
 ```
 
 ### Deploy Grafana with openshift-monitoring and sre prometheus datasources

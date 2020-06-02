@@ -1,0 +1,19 @@
+---
+apiVersion: integreatly.org/v1alpha1
+kind: GrafanaDataSource
+metadata:
+  name: elasticsearch-heartbeat
+  namespace: {{ .Release.Namespace }}
+spec:
+  name: elasticsearch-heartbeat.yaml
+  datasources:
+    - name: elasticsearch-heartbeat
+      type: elasticsearch
+      access: proxy
+      url: http://elasticsearch-sample-es-http.{{ .Release.Namespace }}.svc:9200
+      isDefault: false
+      version: 1
+      editable: false
+      jsonData:
+        tlsSkipVerify: true
+        timeInterval: "5s"
