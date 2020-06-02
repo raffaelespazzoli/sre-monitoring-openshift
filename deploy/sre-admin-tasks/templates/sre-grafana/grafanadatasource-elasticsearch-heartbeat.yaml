@@ -11,9 +11,12 @@ spec:
       type: elasticsearch
       access: proxy
       url: http://elasticsearch-sample-es-http.{{ .Release.Namespace }}.svc:9200
+      database: "heartbeat-7.2.0"
       isDefault: false
       version: 1
       editable: false
       jsonData:
+        timeField: "@timestamp"
+        esVersion: 70
         tlsSkipVerify: true
         timeInterval: "5s"
