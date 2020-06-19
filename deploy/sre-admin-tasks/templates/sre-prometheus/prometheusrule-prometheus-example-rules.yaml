@@ -1,0 +1,21 @@
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  labels:
+    role: alert-rules
+    prometheus: {{ .Values.prometheus.name }}
+  name: prometheus-example-rules
+spec:
+  groups:
+  - name: ./example.rules
+    rules:
+    - alert: ProductPageDown
+      labels:
+        severity: critical
+      annotations:
+        summary: {{` "Application {{ $labels.app }} down" `}}
+        description: {{` "Application {{ $labels.app }} of job {{ $labels.job }} has been down for more than 1 minute." `}}
+      expr: absent(up{app="productpage",job="envoy-stats"})
+      for: 1m
+...

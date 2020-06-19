@@ -80,16 +80,18 @@ spec:
   sha: 70960efc418688d96d6e9b1ee8a35905ce221cb08d9e5aefff9616e44b95cd9f
   ruleSelector:
     matchLabels: 
-      sre-monitoring: "true"
+      role: alert-rules
+      prometheus: {{ .Values.prometheus.name }}
   serviceMonitorSelector: 
     matchLabels: 
       sre-monitoring: "true"
   podMonitorSelector:
     matchLabels:
       sre-monitoring: "true"
-  ruleNamespaceSelector:
-    matchLabels:
-      maistra.io/member-of: {{ .Values.istio_control_plane.namespace }}
+  #ruleNamespaceSelector:
+    #matchLabels:
+      #maistra.io/member-of: {{ .Values.istio_control_plane.namespace }}
+      #kiali.io/member-of: {{ .Values.istio_control_plane.namespace }}
   serviceMonitorNamespaceSelector:
     matchLabels:
       maistra.io/member-of: {{ .Values.istio_control_plane.namespace }}
