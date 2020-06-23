@@ -52,6 +52,8 @@ export root_cert_pem=$(oc get secret -n ${istio_cp_namespace} istio.default -o j
 helm template sre-admin-tasks --namespace ${deploy_namespace} --set istio_control_plane.name=${istio_cp_name} --set istio_control_plane.namespace=${istio_cp_namespace} --set istio_cert.cert_chain=${cert_chain_pem} --set istio_cert.key=${key_pem} --set istio_cert.root_cert=${root_cert_pem} --set prometheus_datasource.openshift_monitoring.password=$(oc extract secret/openshift-monitoring-prometheus -n ${deploy_namespace} --keys=basicAuthPassword --to=-) | oc apply -f -
 
 #wait a few minutes for the prometheus operator to install the statefulset
-oc patch statefulset/prometheus-sre-prometheus --type='json' -p='[{"op": "add", "path": "/spec/template/spec/containers/0/args/-", "value": "--discovery.member-roll-name=default" }, {"op": "add", "path": "/spec/template/spec/containers/0/args/-", "value": "--discovery.member-roll-namespace='${istio_cp_namespace}'" }]' -n ${deploy_namespace}
+if [ -z "$(oc get statefulset/prometheus-sre-prometheus -o jsonpath={.spec.template.spec.containers[0].args} | grep discovery.member-roll-name\=default)" ]; then oc patch statefulset/prometheus-sre-prometheus --type='json' -p='[{"op": "add", "path": "/spec/template/spec/containers/0/args/-", "value": "--discovery.member-roll-name=default" }]' -n ${deploy_namespace}; fi
+
+if [ -z "$(oc get statefulset/prometheus-sre-prometheus -o jsonpath={.spec.template.spec.containers[0].args} | grep discovery.member-roll-namespace\=${istio_cp_namespace})" ]; then oc patch statefulset/prometheus-sre-prometheus --type='json' -p='[{"op": "add", "path": "/spec/template/spec/containers/0/args/-", "value": "--discovery.member-roll-namespace='${istio_cp_namespace}'" }]' -n ${deploy_namespace}; fi
 
 ```
