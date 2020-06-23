@@ -11,6 +11,19 @@ spec:
     requests:
       memory: 256Mi
       cpu: 300m
+  retention: 30d
+  #On average, Prometheus uses only around 1-2 bytes per sample. Thus, to plan the capacity of a Prometheus server, you can use the rough formula:
+  #needed_disk_space = retention_time_seconds * ingested_samples_per_second * bytes_per_sample
+  #rate(prometheus_tsdb_head_samples_appended_total[1h]) gives an indication of samples per second
+  #see https://www.robustperception.io/how-much-disk-space-do-prometheus-blocks-use
+  #~4Gi = 2592000 * 780 * 2
+  storage:
+    volumeClaimTemplate:
+      spec:
+        storageClassName: gp2
+        resources:
+          requests:
+            storage: 10Gi
   logLevel: debug
   podMetadata:
     labels:
