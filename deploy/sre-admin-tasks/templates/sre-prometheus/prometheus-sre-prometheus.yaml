@@ -37,6 +37,19 @@ spec:
     - trusted-ca-bundle   
   containers:
     - args:
+        - '--web.console.templates=/etc/prometheus/consoles'
+        - '--web.console.libraries=/etc/prometheus/console_libraries'
+        - '--config.file=/etc/prometheus/config_out/prometheus.env.yaml'
+        - '--storage.tsdb.path=/prometheus'
+        - '--storage.tsdb.retention.time=30d'
+        - '--web.enable-lifecycle'
+        - '--storage.tsdb.no-lockfile'
+        - '--web.route-prefix=/'
+        - '--log.level=debug'
+        - '--discovery.member-roll-name=default'
+        - '--discovery.member-roll-namespace={{ .Values.istio_control_plane.namespace }}'
+      name: prometheus
+    - args:
         - '-provider=openshift'
         - '-pass-basic-auth=false'
         - '-https-address=:9091'
